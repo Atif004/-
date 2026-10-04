@@ -1,0 +1,112 @@
+# قُدرة Qudra
+
+تطبيق iPhone يساعد المستخدم على تقدير قدرته الشرائية والتمويلية في **التمويل الشخصي** و**التمويل العقاري**.
+
+> ⚠️ جميع قواعد الحساب الحالية **تجريبية** (`is_demo = true`) وليست نسبًا أو قواعد تمويل حقيقية. القواعد تُدار من الـ Cloud (جدول `calculation_rules`) ولا تُكتب داخل التطبيق.
+
+## التقنيات
+
+- Swift + SwiftUI (iOS 17+)، عربي بالكامل مع RTL
+- Supabase Cloud: PostgreSQL + Auth + Edge Functions
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) لتوليد مشروع Xcode من `project.yml`
+
+## هيكل المشروع
+
+```
+project.yml                       ← مواصفات مشروع Xcode (XcodeGen)
+Packages/QudraEngine/             ← محرك الحساب (حزمة Swift مستقلة، بلا واجهة)
+  Sources/QudraEngine/
+    CalculationEngine.swift       ← منطق الحساب (دالة نقية)
+    CalculationModels.swift       ← المدخلات والنتيجة والملاحظات
+    FinancingRules.swift          ← شكل القواعد + RuleSet.demo (قيم تجريبية)
+    FinancingProduct.swift
+  Tests/QudraEngineTests/
+Qudra/
+  App/                            ← نقطة الدخول، الجذر، التبويبات
+  Config/                         ← AppConfig + ملفات xcconfig للمفاتيح
+  DesignSystem/                   ← الألوان والخطوط والمكونات المشتركة
+  Core/
+    Models/                       ← Profile, SavedCalculation, CalculationRuleRow
+    Services/                     ← طبقة الاتصال مع Supabase
+      SupabaseService.swift       ← العميل + الأخطاء العربية
+      AuthService.swift           ← AppSession (تسجيل الدخول/الخروج/ضيف)
+      RulesService.swift          ← RulesStore (Cloud ← نسخة محفوظة ← تجريبي)
+      CalculationsRepository.swift← السجل + استدعاء Edge Function
+      ProfileService.swift
+    Utilities/                    ← تحويل الأرقام العربية والتنسيق
+  Features/
+    Home/                         ← الصفحة الرئيسية
+    PersonalFinance/              ← حاسبة التمويل الشخصي (+ النموذج المشترك)
+    MortgageFinance/              ← حاسبة التمويل العقاري
+    Result/                       ← صفحة نتيجة الحساب
+    History/                      ← النتائج السابقة
+    Profile/                      ← الحساب الشخصي
+    Auth/                         ← تسجيل الدخول وإنشاء الحساب
+  Resources/Assets.xcassets
+QudraTests/                       ← اختبارات التطبيق
+supabase/
+  config.toml
+  migrations/
+    20261004000000_initial_schema.sql   ← الجداول + RLS + trigger الملف الشخصي
+    20261004000100_demo_rules.sql       ← قواعد تجريبية
+  functions/
+    _shared/engine.ts             ← نسخة الخادم من محرك الحساب (مطابقة لـ Swift)
+    calculate-capacity/index.ts   ← حساب على الخادم + حفظ في السجل
+```
+
+## آلية العمل
+
+1. عند فتح التطبيق يجلب `RulesStore` القواعد النشطة من `calculation_rules`. إن فشل، يستخدم آخر نسخة محفوظة، ثم `RuleSet.demo`.
+2. الحاسبة تمرر المدخلات إلى `CalculationEngine` محليًا وتعرض النتيجة فورًا.
+3. عند «حفظ النتيجة» يُرسل التطبيق المدخلات إلى Edge Function `calculate-capacity` التي تعيد الحساب بالقواعد المعتمدة على الخادم وتحفظه في `calculations`. نتيجة الخادم هي المرجع.
+4. سياسات RLS: المستخدم يقرأ/يحذف نتائجه فقط، والقواعد قابلة للقراءة فقط (التعديل من لوحة Supabase).
+
+## خطوات التشغيل
+
+### 1) Supabase
+
+```bash
+brew install supabase/tap/supabase
+supabase login
+supabase link --project-ref <PROJECT_REF>
+supabase db push                                  # ينشئ الجداول والقواعد التجريبية
+supabase functions deploy calculate-capacity
+```
+
+### 2) iOS
+
+```bash
+brew install xcodegen
+cp Qudra/Config/Secrets.example.xcconfig Qudra/Config/Secrets.xcconfig
+# ضع SUPABASE_URL و SUPABASE_ANON_KEY من: Project Settings → API
+xcodegen generate
+open Qudra.xcodeproj
+```
+
+بدون مفاتيح Supabase يعمل التطبيق في وضع الضيف بالقيم التجريبية المدمجة.
+
+### 3) الاختبارات
+
+```bash
+cd Packages/QudraEngine && swift test   # اختبارات محرك الحساب
+```
+
+## تعديل قواعد الحساب
+
+من لوحة Supabase → Table Editor → `calculation_rules`:
+
+1. أضف صفًا بإصدار أعلى (`version`) ومعاملات جديدة (`parameters`) و`is_demo = false`.
+2. اجعل `is_active = false` للصف القديم، ثم `is_active = true` للجديد (يُسمح بقاعدة نشطة واحدة لكل منتج).
+
+| المفتاح | المعنى |
+|---|---|
+| `max_debt_ratio` | أقصى نسبة من الدخل للأقساط (شاملة الالتزامات) |
+| `annual_profit_rate` | نسبة الربح السنوية |
+| `rate_method` | `reducing` أو `flat` |
+| `min_term_months` / `max_term_months` | حدود مدة التمويل |
+| `min_monthly_income` | الحد الأدنى للدخل |
+| `max_financing_amount` | الحد الأقصى لمبلغ التمويل |
+| `max_age_at_maturity` | أقصى عمر عند نهاية التمويل |
+| `min_down_payment_ratio` | الدفعة الأولى الدنيا (عقاري فقط) |
+
+> عند تغيير منطق الحساب، عدّل `CalculationEngine.swift` و`engine.ts` معًا.

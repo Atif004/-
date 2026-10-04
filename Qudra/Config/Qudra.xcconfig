@@ -1,0 +1,8 @@
+// إعدادات البناء المشتركة.
+// القيم السرّية توضع في Secrets.xcconfig (غير مرفوع إلى Git).
+// انسخ Secrets.example.xcconfig إلى Secrets.xcconfig ثم ضع قيم مشروعك.
+
+SUPABASE_URL =
+SUPABASE_ANON_KEY =
+
+#include? "Secrets.xcconfig"

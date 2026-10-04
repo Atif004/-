@@ -1,0 +1,26 @@
+# إعدادات Supabase CLI للمشروع.
+# للربط بالمشروع السحابي: supabase link --project-ref <PROJECT_REF>
+project_id = "qudra"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "qudra://auth-callback"
+additional_redirect_urls = []
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+
+[functions.calculate-capacity]
+verify_jwt = true

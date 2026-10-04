@@ -1,0 +1,24 @@
+# Xcode
+# المشروع يُولَّد عبر XcodeGen من project.yml
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+*.xcuserstate
+build/
+.build/
+.swiftpm/
+
+# Secrets
+Qudra/Config/Secrets.xcconfig
+supabase/.env
+supabase/functions/.env
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# macOS
+.DS_Store
+
+# يُولَّد تلقائيًا من project.yml
+Qudra/Info.plist

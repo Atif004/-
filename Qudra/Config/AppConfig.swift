@@ -1,0 +1,30 @@
+import Foundation
+
+/// إعدادات التطبيق المقروءة من Info.plist (والتي تأتي بدورها من ملفات xcconfig).
+enum AppConfig {
+    static let supabaseURL: URL? = {
+        guard let raw = value(for: "SUPABASE_URL") else { return nil }
+        return URL(string: raw)
+    }()
+
+    static let supabaseAnonKey: String? = value(for: "SUPABASE_ANON_KEY")
+
+    /// `true` عند ضبط مفاتيح Supabase. إن لم تُضبط يعمل التطبيق محليًا بقيم تجريبية.
+    static var isSupabaseConfigured: Bool {
+        supabaseURL != nil && supabaseAnonKey != nil
+    }
+
+    /// رمز العملة المعروض. قابل للتغيير لاحقًا.
+    static let currencyCode = "SAR"
+
+    /// اسم الـ Edge Function المسؤولة عن الحساب والحفظ على الخادم.
+    static let calculateFunctionName = "calculate-capacity"
+
+    private static func value(for key: String) -> String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        // قيمة فارغة أو متغير غير مُستبدل تعني أن الإعداد غير موجود.
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("$("), !trimmed.contains("YOUR-") else { return nil }
+        return trimmed
+    }
+}
