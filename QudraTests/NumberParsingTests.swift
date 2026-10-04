@@ -15,3 +15,11 @@ final class NumberParsingTests: XCTestCase {
         XCTAssertNil(NumberParsing.int(from: "abc"))
     }
 }
+
+final class AuthRedirectTests: XCTestCase {
+    func testRecoveryURLDetection() {
+        XCTAssertTrue(AppSession.isPasswordRecoveryURL(URL(string: "qudra://auth-callback/recovery?code=abc")!))
+        XCTAssertFalse(AppSession.isPasswordRecoveryURL(URL(string: "qudra://auth-callback?code=abc")!))
+        XCTAssertFalse(AppSession.isPasswordRecoveryURL(URL(string: "https://auth-callback/recovery")!))
+    }
+}

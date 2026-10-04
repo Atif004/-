@@ -82,7 +82,7 @@ final class AppSession {
     func sendPasswordReset(email: String) async throws {
         let client = try SupabaseService.requireClient()
         do {
-            try await client.auth.resetPasswordForEmail(email, redirectTo: AppConfig.authRedirectURL)
+            try await client.auth.resetPasswordForEmail(email, redirectTo: AppConfig.passwordRecoveryRedirectURL)
         } catch {
             throw QudraError.wrap(error)
         }
@@ -102,7 +102,21 @@ final class AppSession {
     func handle(url: URL) async {
         guard let client = SupabaseService.client,
               url.scheme == AppConfig.authRedirectURL.scheme else { return }
-        _ = try? await client.auth.session(from: url)
+        do {
+            _ = try await client.auth.session(from: url)
+            // في تدفق PKCE لا يصل حدث passwordRecovery، فنعتمد على مسار الرابط.
+            if Self.isPasswordRecoveryURL(url) {
+                isRecoveringPassword = true
+            }
+        } catch {
+            // رابط منتهي أو مستخدم مسبقًا: يبقى المستخدم في حالته الحالية.
+        }
+    }
+
+    nonisolated static func isPasswordRecoveryURL(_ url: URL) -> Bool {
+        url.scheme == AppConfig.passwordRecoveryRedirectURL.scheme
+            && url.host == AppConfig.passwordRecoveryRedirectURL.host
+            && url.path == AppConfig.passwordRecoveryRedirectURL.path
     }
 
     func signOut() async {

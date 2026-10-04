@@ -38,6 +38,11 @@ enum AppConfig {
     /// يجب إضافته في Supabase: Authentication → URL Configuration → Redirect URLs.
     static let authRedirectURL = URL(string: "qudra://auth-callback")!
 
+    /// رابط العودة من رسالة استعادة كلمة المرور. مساره المميز (/recovery) هو ما يجعل التطبيق
+    /// يعرض شاشة كلمة المرور الجديدة، لأن تدفق PKCE (الافتراضي في supabase-swift)
+    /// لا يُرسل حدث passwordRecovery. يجب إضافته أيضًا في Redirect URLs على Supabase.
+    static let passwordRecoveryRedirectURL = URL(string: "qudra://auth-callback/recovery")!
+
     /// المدة التي تُعتبر بعدها القواعد المحلية قديمة ويُعاد جلبها عند العودة للتطبيق.
     static let rulesRefreshInterval: TimeInterval = 15 * 60
 

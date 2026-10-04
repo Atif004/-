@@ -15,7 +15,7 @@ major_version = 15
 [auth]
 enabled = true
 site_url = "qudra://auth-callback"
-additional_redirect_urls = ["qudra://auth-callback"]
+additional_redirect_urls = ["qudra://auth-callback", "qudra://auth-callback/recovery"]
 enable_signup = true
 
 [auth.email]
