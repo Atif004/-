@@ -14,6 +14,19 @@ enum AppConfig {
         supabaseURL != nil && supabaseAnonKey != nil
     }
 
+    /// بريد الدعم (اختياري). يُضبط عبر QUDRA_SUPPORT_EMAIL في xcconfig.
+    static let supportEmail: String? = {
+        guard let email = value(for: "QUDRA_SUPPORT_EMAIL"), email.contains("@"),
+              !email.hasSuffix("@example.com") else { return nil }
+        return email
+    }()
+
+    static var appVersion: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+        return "\(version) (\(build))"
+    }
+
     /// رمز العملة المعروض. قابل للتغيير لاحقًا.
     static let currencyCode = "SAR"
 

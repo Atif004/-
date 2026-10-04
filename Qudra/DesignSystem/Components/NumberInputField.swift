@@ -18,10 +18,13 @@ struct NumberInputField: View {
                     .keyboardType(allowsDecimal ? .decimalPad : .numberPad)
                     .font(.system(.title3, design: .rounded, weight: .semibold))
                     .foregroundStyle(Theme.Colors.textPrimary)
+                    .accessibilityLabel(title)
+                    .accessibilityHint(hint ?? "")
                 if let unit {
                     Text(unit)
                         .font(Theme.Fonts.caption)
                         .foregroundStyle(Theme.Colors.gold)
+                        .accessibilityHidden(true)
                 }
             }
             .padding(.horizontal, Theme.Spacing.m)

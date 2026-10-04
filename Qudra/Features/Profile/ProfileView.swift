@@ -45,6 +45,23 @@ struct ProfileView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                NavigationLink {
+                    AboutView()
+                } label: {
+                    QudraCard {
+                        HStack {
+                            Image(systemName: "info.circle")
+                                .foregroundStyle(Theme.Colors.gold)
+                            Text("حول التطبيق والخصوصية")
+                                .font(Theme.Fonts.headline)
+                                .foregroundStyle(Theme.Colors.textPrimary)
+                            Spacer()
+                            Image(systemName: "chevron.forward")
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
                 if session.isAuthenticated {
                     SecondaryButton(title: "تسجيل الخروج", systemImage: "rectangle.portrait.and.arrow.right") {
                         Task { await session.signOut() }

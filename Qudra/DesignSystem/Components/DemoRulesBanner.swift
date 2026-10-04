@@ -6,6 +6,7 @@ struct DemoRulesBanner: View {
         HStack(alignment: .top, spacing: Theme.Spacing.s) {
             Image(systemName: "flask.fill")
                 .foregroundStyle(Theme.Colors.warning)
+                .accessibilityHidden(true)
             Text("تُستخدم حاليًا قيم تجريبية للتطوير فقط، والنتائج غير معتمدة.")
                 .font(Theme.Fonts.caption)
                 .foregroundStyle(Theme.Colors.textPrimary)
@@ -36,5 +37,6 @@ struct InfoRow: View {
                 .foregroundStyle(emphasized ? Theme.Colors.gold : Theme.Colors.textPrimary)
         }
         .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
     }
 }

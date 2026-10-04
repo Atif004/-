@@ -42,12 +42,12 @@ enum Theme {
     }
 
     enum Fonts {
-        static let display = Font.system(size: 34, weight: .bold)
+        static let display = Font.system(.largeTitle, weight: .bold)
         static let title = Font.system(.title2, weight: .bold)
         static let headline = Font.system(.headline, weight: .semibold)
         static let body = Font.system(.body)
         static let caption = Font.system(.footnote)
-        static let amount = Font.system(size: 36, weight: .bold, design: .rounded)
+        static let amount = Font.system(.largeTitle, design: .rounded, weight: .bold)
     }
 }
 

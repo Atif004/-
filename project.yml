@@ -58,6 +58,7 @@ targets:
             CFBundleURLSchemes: [qudra]
         SUPABASE_URL: $(SUPABASE_URL)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        QUDRA_SUPPORT_EMAIL: $(QUDRA_SUPPORT_EMAIL)
 
   QudraTests:
     type: bundle.unit-test

@@ -70,6 +70,7 @@ struct CalculationResultView: View {
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
         }
+        .accessibilityElement(children: .combine)
     }
 
     private var details: some View {

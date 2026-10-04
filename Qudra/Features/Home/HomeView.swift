@@ -110,5 +110,7 @@ private struct ProductCard: View {
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 }

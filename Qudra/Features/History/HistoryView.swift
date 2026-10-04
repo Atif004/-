@@ -209,6 +209,7 @@ private struct HistoryRow: View {
                 .foregroundStyle(Theme.Colors.gold)
         }
         .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
     }
 }
 

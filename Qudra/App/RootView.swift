@@ -3,9 +3,27 @@ import SwiftUI
 /// يحدد الشاشة الجذرية حسب حالة الجلسة.
 struct RootView: View {
     @Environment(AppSession.self) private var session
+    @AppStorage(LegalInfo.acceptedTermsVersionKey) private var acceptedTermsVersion = 0
 
     var body: some View {
         @Bindable var session = session
+        Group {
+            if acceptedTermsVersion < LegalInfo.currentTermsVersion {
+                OnboardingView {
+                    acceptedTermsVersion = LegalInfo.currentTermsVersion
+                }
+            } else {
+                mainContent
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: acceptedTermsVersion)
+        .sheet(isPresented: $session.isRecoveringPassword) {
+            NewPasswordView()
+        }
+    }
+
+    @ViewBuilder
+    private var mainContent: some View {
         Group {
             switch session.state {
             case .loading:
@@ -17,9 +35,6 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: session.state)
-        .sheet(isPresented: $session.isRecoveringPassword) {
-            NewPasswordView()
-        }
     }
 }
 
@@ -48,5 +63,8 @@ struct BrandMark: View {
                 .tracking(size * 0.08)
                 .foregroundStyle(Theme.Colors.textSecondary)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("قُدرة")
+        .accessibilityAddTraits(.isHeader)
     }
 }

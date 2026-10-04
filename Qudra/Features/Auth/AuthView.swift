@@ -17,6 +17,7 @@ struct AuthView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var infoMessage: String?
+    @State private var shownDocument: LegalDocument?
 
     var body: some View {
         ScrollView {
@@ -59,6 +60,20 @@ struct AuthView: View {
                     Task { await submit() }
                 }
 
+                if mode == .signUp {
+                    VStack(spacing: 4) {
+                        Text("بإنشاء حساب فإنك توافق على")
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                        HStack(spacing: 4) {
+                            Button(LegalDocument.termsOfUse.title) { shownDocument = .termsOfUse }
+                            Text("و").foregroundStyle(Theme.Colors.textSecondary)
+                            Button(LegalDocument.privacyPolicy.title) { shownDocument = .privacyPolicy }
+                        }
+                        .foregroundStyle(Theme.Colors.gold)
+                    }
+                    .font(.caption)
+                }
+
                 if mode == .signIn {
                     Button("نسيت كلمة المرور؟") {
                         Task { await sendPasswordReset() }
@@ -83,6 +98,17 @@ struct AuthView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .qudraBackground()
+        .sheet(item: $shownDocument) { document in
+            NavigationStack {
+                LegalDocumentView(document: document)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("تم") { shownDocument = nil }
+                        }
+                    }
+            }
+            .environment(\.layoutDirection, .rightToLeft)
+        }
         .onChange(of: mode) {
             errorMessage = nil
             infoMessage = nil
@@ -158,6 +184,7 @@ struct AuthTextField: View {
                     TextField("", text: $text)
                 }
             }
+            .accessibilityLabel(title)
             .textContentType(contentType)
             .keyboardType(keyboard)
             .textInputAutocapitalization(.never)
