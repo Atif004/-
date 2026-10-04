@@ -3,6 +3,7 @@ import SwiftUI
 enum AppRoute: Hashable {
     case personalCalculator
     case mortgageCalculator
+    case comparison
 }
 
 struct MainTabView: View {
@@ -14,6 +15,7 @@ struct MainTabView: View {
                         switch route {
                         case .personalCalculator: PersonalFinanceCalculatorView()
                         case .mortgageCalculator: MortgageFinanceCalculatorView()
+                        case .comparison: ComparisonBuilderView()
                         }
                     }
             }

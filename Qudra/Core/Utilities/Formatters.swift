@@ -28,6 +28,16 @@ enum Formatters {
         }
     }
 
+    /// صيغة مختصرة للجداول الضيقة: "5 سنة" أو "18 شهر".
+    static func months(compact months: Int) -> String {
+        if months > 0, months % 12 == 0 { return "\(months / 12) سنة" }
+        return "\(months) شهر"
+    }
+
+    static func shortDate(_ date: Date) -> String {
+        date.formatted(.dateTime.day().month(.abbreviated).year(.twoDigits).locale(locale))
+    }
+
     static func date(_ date: Date) -> String {
         date.formatted(.dateTime.day().month(.wide).year().hour().minute().locale(locale))
     }

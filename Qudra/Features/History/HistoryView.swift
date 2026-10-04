@@ -9,6 +9,26 @@ struct HistoryView: View {
     @State private var errorMessage: String?
     @State private var selected: ResultPresentation?
     @State private var filter: HistoryFilter = .all
+    @State private var selection = Set<UUID>()
+    @State private var editMode: EditMode = .inactive
+    @State private var comparison: ComparisonPresentation?
+
+    private var isSelecting: Bool { editMode.isEditing }
+
+    private var selectedItems: [SavedCalculation] {
+        items.filter { selection.contains($0.id) }
+    }
+
+    /// سبب عدم إمكانية المقارنة، أو `nil` إن كانت ممكنة.
+    private var comparisonBlocker: String? {
+        let selected = selectedItems
+        if selected.count < 2 { return "اختر نتيجتين على الأقل." }
+        if selected.count > ScenarioComparison.maxScenarios {
+            return "يمكن مقارنة \(ScenarioComparison.maxScenarios) نتائج كحد أقصى."
+        }
+        if Set(selected.map(\.product)).count > 1 { return "اختر نتائج من نفس نوع التمويل." }
+        return nil
+    }
 
     enum HistoryFilter: String, CaseIterable, Identifiable {
         case all = "الكل"
@@ -36,6 +56,10 @@ struct HistoryView: View {
             .qudraBackground()
             .navigationTitle("النتائج السابقة")
             .navigationDestination(item: $selected) { CalculationResultView(presentation: $0) }
+            .navigationDestination(item: $comparison) { ComparisonView(presentation: $0) }
+            .environment(\.editMode, $editMode)
+            .toolbar { toolbarContent }
+            .onChange(of: session.isAuthenticated) { stopSelecting() }
             .task(id: session.currentUser?.id) { await load() }
             .onReceive(NotificationCenter.default.publisher(for: .qudraCalculationSaved)) { _ in
                 Task { await load() }
@@ -61,7 +85,7 @@ struct HistoryView: View {
                 message: "احسب قدرتك التمويلية واحفظ النتيجة لتظهر هنا."
             )
         } else {
-            List {
+            List(selection: $selection) {
                 Picker("", selection: $filter) {
                     ForEach(HistoryFilter.allCases) { Text($0.rawValue).tag($0) }
                 }
@@ -77,11 +101,17 @@ struct HistoryView: View {
                 }
 
                 ForEach(filteredItems) { item in
-                    Button {
-                        selected = ResultPresentation(input: item.input, result: item.result,
-                                                      origin: .history(savedAt: item.createdAt))
-                    } label: {
-                        HistoryRow(item: item)
+                    Group {
+                        if isSelecting {
+                            HistoryRow(item: item)
+                        } else {
+                            Button {
+                                selected = ResultPresentation(input: item.input, result: item.result,
+                                                              origin: .history(savedAt: item.createdAt))
+                            } label: {
+                                HistoryRow(item: item)
+                            }
+                        }
                     }
                     .listRowBackground(Theme.Colors.surface)
                 }
@@ -89,6 +119,39 @@ struct HistoryView: View {
             }
             .refreshable { await load() }
         }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        if session.isAuthenticated && items.count >= 2 {
+            ToolbarItem(placement: .primaryAction) {
+                Button(isSelecting ? "إلغاء" : "مقارنة") {
+                    if isSelecting { stopSelecting() } else { editMode = .active }
+                }
+            }
+        }
+        if isSelecting {
+            ToolbarItem(placement: .bottomBar) {
+                VStack(spacing: 2) {
+                    Button("قارن المحدد (\(selection.count))") {
+                        comparison = ComparisonPresentation(saved: selectedItems)
+                        stopSelecting()
+                    }
+                    .font(Theme.Fonts.headline)
+                    .disabled(comparisonBlocker != nil)
+                    if let comparisonBlocker {
+                        Text(comparisonBlocker)
+                            .font(.caption2)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func stopSelecting() {
+        editMode = .inactive
+        selection.removeAll()
     }
 
     private func load() async {

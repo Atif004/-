@@ -28,6 +28,13 @@ struct HomeView: View {
                             systemImage: "building.2"
                         )
                     }
+                    NavigationLink(value: AppRoute.comparison) {
+                        ProductCard(
+                            title: "مقارنة السيناريوهات",
+                            subtitle: "قارن بين مدد ودفعات مختلفة جنبًا إلى جنب",
+                            systemImage: "rectangle.split.3x1"
+                        )
+                    }
                 }
                 .buttonStyle(.plain)
 
