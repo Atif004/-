@@ -1,0 +1,87 @@
+{
+  "_comment": "حالات اختبار مشتركة بين محرك Swift ومحرك الخادم (engine.ts). القواعد هنا للاختبار فقط وليست قواعد تمويل حقيقية.",
+  "base_rules": {
+    "max_debt_ratio": 0.5,
+    "annual_profit_rate": 0,
+    "rate_method": "reducing",
+    "min_term_months": 12,
+    "max_term_months": 120,
+    "min_monthly_income": 1000,
+    "max_financing_amount": 1000000,
+    "max_age_at_maturity": 60
+  },
+  "cases": [
+    {
+      "name": "zero rate: principal = installment x term",
+      "rules": {},
+      "input": { "product_type": "personal", "monthly_income": 10000, "monthly_obligations": 1000, "age": 30, "requested_term_months": 60, "down_payment_savings": 0 },
+      "expected": { "is_eligible": true, "max_monthly_installment": 4000, "max_financing_amount": 240000, "term_months": 60, "total_profit": 0, "note_codes": [] }
+    },
+    {
+      "name": "empty term uses max term",
+      "rules": {},
+      "input": { "product_type": "personal", "monthly_income": 10000, "monthly_obligations": 0, "age": 30, "requested_term_months": 0, "down_payment_savings": 0 },
+      "expected": { "is_eligible": true, "term_months": 120, "max_financing_amount": 600000, "note_codes": [] }
+    },
+    {
+      "name": "term limited by age at maturity",
+      "rules": {},
+      "input": { "product_type": "personal", "monthly_income": 10000, "monthly_obligations": 0, "age": 55, "requested_term_months": 120, "down_payment_savings": 0 },
+      "expected": { "is_eligible": true, "term_months": 60, "note_codes": ["term_adjusted"] }
+    },
+    {
+      "name": "capped by max financing amount",
+      "rules": { "max_financing_amount": 60000 },
+      "input": { "product_type": "personal", "monthly_income": 10000, "monthly_obligations": 0, "age": 30, "requested_term_months": 60, "down_payment_savings": 0 },
+      "expected": { "is_eligible": true, "max_financing_amount": 60000, "max_monthly_installment": 1000, "note_codes": ["capped_by_max_amount"] }
+    },
+    {
+      "name": "reducing rate",
+      "rules": { "annual_profit_rate": 0.06 },
+      "input": { "product_type": "personal", "monthly_income": 4000, "monthly_obligations": 0, "age": 30, "requested_term_months": 12, "down_payment_savings": 0 },
+      "expected": { "is_eligible": true, "max_monthly_installment": 2000, "max_financing_amount": 23237.86, "total_repayment": 24000, "total_profit": 762.14, "note_codes": [] }
+    },
+    {
+      "name": "flat rate",
+      "rules": { "annual_profit_rate": 0.06, "rate_method": "flat" },
+      "input": { "product_type": "personal", "monthly_income": 4000, "monthly_obligations": 0, "age": 30, "requested_term_months": 12, "down_payment_savings": 0 },
+      "expected": { "is_eligible": true, "max_monthly_installment": 2000, "max_financing_amount": 22641.51, "note_codes": [] }
+    },
+    {
+      "name": "below minimum income",
+      "rules": {},
+      "input": { "product_type": "personal", "monthly_income": 500, "monthly_obligations": 0, "age": 30, "requested_term_months": 60, "down_payment_savings": 0 },
+      "expected": { "is_eligible": false, "max_financing_amount": 0, "note_codes": ["below_min_income"] }
+    },
+    {
+      "name": "obligations exceed limit",
+      "rules": {},
+      "input": { "product_type": "personal", "monthly_income": 10000, "monthly_obligations": 6000, "age": 30, "requested_term_months": 60, "down_payment_savings": 0 },
+      "expected": { "is_eligible": false, "note_codes": ["obligations_exceed_limit"] }
+    },
+    {
+      "name": "term too short because of age",
+      "rules": {},
+      "input": { "product_type": "personal", "monthly_income": 10000, "monthly_obligations": 0, "age": 60, "requested_term_months": 60, "down_payment_savings": 0 },
+      "expected": { "is_eligible": false, "term_months": 0, "note_codes": ["term_adjusted", "term_too_short"] }
+    },
+    {
+      "name": "mortgage limited by down payment",
+      "rules": { "min_down_payment_ratio": 0.1 },
+      "input": { "product_type": "mortgage", "monthly_income": 10000, "monthly_obligations": 0, "age": 30, "requested_term_months": 120, "down_payment_savings": 10000 },
+      "expected": { "is_eligible": true, "max_property_value": 100000, "down_payment": 10000, "max_financing_amount": 90000, "note_codes": ["limited_by_down_payment"] }
+    },
+    {
+      "name": "mortgage limited by income",
+      "rules": { "min_down_payment_ratio": 0.1 },
+      "input": { "product_type": "mortgage", "monthly_income": 2000, "monthly_obligations": 0, "age": 30, "requested_term_months": 120, "down_payment_savings": 50000 },
+      "expected": { "is_eligible": true, "max_financing_amount": 120000, "max_property_value": 170000, "down_payment": 50000, "note_codes": [] }
+    },
+    {
+      "name": "mortgage requires down payment",
+      "rules": { "min_down_payment_ratio": 0.1 },
+      "input": { "product_type": "mortgage", "monthly_income": 10000, "monthly_obligations": 0, "age": 30, "requested_term_months": 120, "down_payment_savings": 0 },
+      "expected": { "is_eligible": false, "max_property_value": 0, "note_codes": ["down_payment_required"] }
+    }
+  ]
+}

@@ -26,6 +26,19 @@ final class CalculatorViewModel {
 
     var termUnit: String { product == .mortgage ? "سنة" : "شهر" }
 
+    /// تلميح المدة مبني على القواعد الحالية القادمة من الـ Cloud.
+    func termHint(rules: FinancingRules) -> String {
+        let maxTerm = product == .mortgage
+            ? "\(rules.maxTermMonths / 12) سنة"
+            : "\(rules.maxTermMonths) شهر"
+        return "أقصى مدة حاليًا: \(maxTerm). اتركها فارغة لاستخدام أقصى مدة متاحة."
+    }
+
+    func downPaymentHint(rules: FinancingRules) -> String? {
+        guard let ratio = rules.minDownPaymentRatio, ratio > 0 else { return nil }
+        return "الحد الأدنى للدفعة الأولى: \(Formatters.percent(ratio)) من قيمة العقار."
+    }
+
     func calculate(using ruleSet: RuleSet) {
         validationMessage = nil
         guard let income = NumberParsing.double(from: monthlyIncome), income > 0 else {

@@ -15,7 +15,7 @@ major_version = 15
 [auth]
 enabled = true
 site_url = "qudra://auth-callback"
-additional_redirect_urls = []
+additional_redirect_urls = ["qudra://auth-callback"]
 enable_signup = true
 
 [auth.email]
@@ -23,4 +23,7 @@ enable_signup = true
 enable_confirmations = true
 
 [functions.calculate-capacity]
+verify_jwt = true
+
+[functions.delete-account]
 verify_jwt = true

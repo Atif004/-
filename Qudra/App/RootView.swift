@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(AppSession.self) private var session
 
     var body: some View {
+        @Bindable var session = session
         Group {
             switch session.state {
             case .loading:
@@ -16,6 +17,9 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: session.state)
+        .sheet(isPresented: $session.isRecoveringPassword) {
+            NewPasswordView()
+        }
     }
 }
 

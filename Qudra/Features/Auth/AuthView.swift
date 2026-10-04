@@ -59,6 +59,15 @@ struct AuthView: View {
                     Task { await submit() }
                 }
 
+                if mode == .signIn {
+                    Button("نسيت كلمة المرور؟") {
+                        Task { await sendPasswordReset() }
+                    }
+                    .font(Theme.Fonts.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .disabled(isLoading)
+                }
+
                 Button("المتابعة كضيف") { session.continueAsGuest() }
                     .font(Theme.Fonts.headline)
                     .foregroundStyle(Theme.Colors.gold)
@@ -84,8 +93,12 @@ struct AuthView: View {
         errorMessage = nil
         infoMessage = nil
         let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
-        guard trimmedEmail.contains("@"), password.count >= 6 else {
-            errorMessage = "أدخل بريدًا إلكترونيًا صحيحًا وكلمة مرور من 6 أحرف على الأقل."
+        guard AuthValidation.isValidEmail(trimmedEmail) else {
+            errorMessage = "أدخل بريدًا إلكترونيًا صحيحًا."
+            return
+        }
+        guard password.count >= AuthValidation.minPasswordLength else {
+            errorMessage = AuthValidation.passwordTooShortMessage
             return
         }
         isLoading = true
@@ -102,6 +115,24 @@ struct AuthView: View {
                     mode = .signIn
                 }
             }
+        } catch {
+            errorMessage = QudraError.wrap(error).localizedDescription
+        }
+    }
+
+    private func sendPasswordReset() async {
+        errorMessage = nil
+        infoMessage = nil
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        guard AuthValidation.isValidEmail(trimmedEmail) else {
+            errorMessage = "أدخل بريدك الإلكتروني أولًا لإرسال رابط الاستعادة."
+            return
+        }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            try await session.sendPasswordReset(email: trimmedEmail)
+            infoMessage = "أرسلنا رابط استعادة كلمة المرور إلى بريدك الإلكتروني."
         } catch {
             errorMessage = QudraError.wrap(error).localizedDescription
         }

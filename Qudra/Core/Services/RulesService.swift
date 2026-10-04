@@ -17,6 +17,7 @@ final class RulesStore {
     private(set) var ruleSet: RuleSet
     private(set) var source: Source
     private(set) var isLoading = false
+    @ObservationIgnored private var lastFetchedAt: Date?
 
     private static let cacheKey = "qudra.cachedRuleSet"
 
@@ -31,8 +32,16 @@ final class RulesStore {
         }
     }
 
+    /// يعيد الجلب فقط إن مرّت مدة كافية منذ آخر جلب ناجح (يُستدعى عند عودة التطبيق للواجهة).
+    func refreshIfStale() async {
+        if let lastFetchedAt, Date().timeIntervalSince(lastFetchedAt) < AppConfig.rulesRefreshInterval {
+            return
+        }
+        await refresh()
+    }
+
     func refresh() async {
-        guard let client = SupabaseService.client else { return }
+        guard let client = SupabaseService.client, !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -52,6 +61,7 @@ final class RulesStore {
             )
             ruleSet = fetched
             source = .cloud
+            lastFetchedAt = Date()
             if let data = try? JSONEncoder().encode(fetched) {
                 UserDefaults.standard.set(data, forKey: Self.cacheKey)
             }

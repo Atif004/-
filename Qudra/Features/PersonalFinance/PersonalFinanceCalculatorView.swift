@@ -4,11 +4,13 @@ import QudraEngine
 
 struct PersonalFinanceCalculatorView: View {
     @State private var viewModel = CalculatorViewModel(product: .personal)
+    @Environment(RulesStore.self) private var rules
 
     var body: some View {
         CalculatorFormView(viewModel: viewModel, title: "التمويل الشخصي") {
             NumberInputField(title: "مدة التمويل المطلوبة", text: $viewModel.term,
-                             unit: viewModel.termUnit, hint: "اتركها فارغة لاستخدام أقصى مدة متاحة.",
+                             unit: viewModel.termUnit,
+                             hint: viewModel.termHint(rules: rules.ruleSet.personal),
                              allowsDecimal: false)
         }
     }

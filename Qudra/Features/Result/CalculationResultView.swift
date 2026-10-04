@@ -18,6 +18,7 @@ struct CalculationResultView: View {
 
     /// بعد الحفظ نعرض نتيجة الخادم لأنها المرجع المعتمد.
     private var result: CalculationResult { serverResult ?? presentation.result }
+    private var summary: ResultSummary { ResultSummary(input: presentation.input, result: result) }
 
     var body: some View {
         ScrollView {
@@ -39,6 +40,13 @@ struct CalculationResultView: View {
         .qudraBackground()
         .navigationTitle("نتيجة الحساب")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                ShareLink(item: summary.shareText) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+        }
     }
 
     // MARK: - Sections
@@ -75,6 +83,20 @@ struct CalculationResultView: View {
             InfoRow(title: "مدة التمويل", value: Formatters.months(result.termMonths))
             InfoRow(title: "إجمالي السداد", value: Formatters.currency(result.totalRepayment))
             InfoRow(title: "إجمالي الربح", value: Formatters.currency(result.totalProfit))
+            if let ratio = summary.debtRatioAfterFinancing {
+                InfoRow(title: "نسبة الأقساط من الدخل", value: Formatters.percent(ratio))
+            }
+            if let remaining = summary.remainingMonthlyIncome {
+                InfoRow(title: "المتبقي من الدخل شهريًا", value: Formatters.currency(remaining))
+            }
+            if result.isEligible && result.totalRepayment > 0 {
+                BreakdownBar(
+                    principalShare: summary.principalShare,
+                    principalLabel: Formatters.currency(result.maxFinancingAmount),
+                    profitLabel: Formatters.currency(result.totalProfit)
+                )
+                .padding(.top, Theme.Spacing.s)
+            }
         }
     }
 
@@ -148,6 +170,7 @@ struct CalculationResultView: View {
                 let response = try await repository.calculateAndSave(presentation.input)
                 serverResult = response.result
                 saveState = .saved
+                NotificationCenter.default.post(name: .qudraCalculationSaved, object: nil)
             } catch {
                 saveState = .failed(QudraError.wrap(error).localizedDescription)
             }

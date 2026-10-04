@@ -19,6 +19,14 @@ enum AppConfig {
 
     /// اسم الـ Edge Function المسؤولة عن الحساب والحفظ على الخادم.
     static let calculateFunctionName = "calculate-capacity"
+    static let deleteAccountFunctionName = "delete-account"
+
+    /// رابط العودة من رسائل البريد (تأكيد الحساب واستعادة كلمة المرور).
+    /// يجب إضافته في Supabase: Authentication → URL Configuration → Redirect URLs.
+    static let authRedirectURL = URL(string: "qudra://auth-callback")!
+
+    /// المدة التي تُعتبر بعدها القواعد المحلية قديمة ويُعاد جلبها عند العودة للتطبيق.
+    static let rulesRefreshInterval: TimeInterval = 15 * 60
 
     private static func value(for key: String) -> String? {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }

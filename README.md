@@ -51,7 +51,9 @@ supabase/
     20261004000100_demo_rules.sql       ← قواعد تجريبية
   functions/
     _shared/engine.ts             ← نسخة الخادم من محرك الحساب (مطابقة لـ Swift)
+    _shared/engine.test.ts        ← اختبارات الحالات المشتركة
     calculate-capacity/index.ts   ← حساب على الخادم + حفظ في السجل
+    delete-account/index.ts       ← حذف الحساب نهائيًا (مطلب App Store)
 ```
 
 ## آلية العمل
@@ -71,7 +73,16 @@ supabase login
 supabase link --project-ref <PROJECT_REF>
 supabase db push                                  # ينشئ الجداول والقواعد التجريبية
 supabase functions deploy calculate-capacity
+supabase functions deploy delete-account
 ```
+
+ثم من لوحة Supabase → **Authentication → URL Configuration → Redirect URLs** أضف:
+
+```
+qudra://auth-callback
+```
+
+هذا الرابط تستخدمه رسائل تأكيد الحساب واستعادة كلمة المرور لإعادة المستخدم إلى التطبيق.
 
 ### 2) iOS
 
@@ -88,8 +99,13 @@ open Qudra.xcodeproj
 ### 3) الاختبارات
 
 ```bash
-cd Packages/QudraEngine && swift test   # اختبارات محرك الحساب
+cd Packages/QudraEngine && swift test                              # محرك Swift
+deno test --allow-read supabase/functions/_shared/engine.test.ts   # محرك الخادم
 ```
+
+المحركان يُختبران على **نفس الحالات** في
+`Packages/QudraEngine/Tests/QudraEngineTests/Fixtures/engine_cases.json`.
+عند تعديل منطق الحساب أضف حالة هناك، ويجب أن ينجح الاختباران معًا.
 
 ## تعديل قواعد الحساب
 
@@ -110,3 +126,12 @@ cd Packages/QudraEngine && swift test   # اختبارات محرك الحساب
 | `min_down_payment_ratio` | الدفعة الأولى الدنيا (عقاري فقط) |
 
 > عند تغيير منطق الحساب، عدّل `CalculationEngine.swift` و`engine.ts` معًا.
+
+## الميزات الحالية
+
+- حاسبتا التمويل الشخصي والعقاري، مع تلميحات تُبنى من القواعد الحالية في الـ Cloud.
+- صفحة نتيجة فيها توزيع المبلغ بين الأصل والربح، ونسبة الأقساط من الدخل، والمتبقي من الدخل، ومشاركة النتيجة.
+- سجل نتائج مع تصفية حسب المنتج، ويتحدّث تلقائيًا بعد الحفظ.
+- تسجيل دخول وإنشاء حساب واستعادة كلمة المرور عبر رابط البريد، ووضع ضيف.
+- حذف الحساب نهائيًا من صفحة «حسابي».
+- تحديث القواعد عند العودة للتطبيق إذا مرّ على آخر جلب أكثر من 15 دقيقة.

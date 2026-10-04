@@ -11,6 +11,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "QudraEngine"),
-        .testTarget(name: "QudraEngineTests", dependencies: ["QudraEngine"])
+        .testTarget(
+            name: "QudraEngineTests",
+            dependencies: ["QudraEngine"],
+            // حالات مشتركة مع محرك الخادم supabase/functions/_shared/engine.ts
+            resources: [.copy("Fixtures")]
+        )
     ]
 )

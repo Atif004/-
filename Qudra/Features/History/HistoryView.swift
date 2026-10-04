@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import QudraEngine
 
@@ -7,6 +8,26 @@ struct HistoryView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selected: ResultPresentation?
+    @State private var filter: HistoryFilter = .all
+
+    enum HistoryFilter: String, CaseIterable, Identifiable {
+        case all = "الكل"
+        case personal = "شخصي"
+        case mortgage = "عقاري"
+        var id: String { rawValue }
+
+        func includes(_ product: FinancingProduct) -> Bool {
+            switch self {
+            case .all: return true
+            case .personal: return product == .personal
+            case .mortgage: return product == .mortgage
+            }
+        }
+    }
+
+    private var filteredItems: [SavedCalculation] {
+        items.filter { filter.includes($0.product) }
+    }
 
     private let repository = CalculationsRepository()
 
@@ -16,6 +37,9 @@ struct HistoryView: View {
             .navigationTitle("النتائج السابقة")
             .navigationDestination(item: $selected) { CalculationResultView(presentation: $0) }
             .task(id: session.currentUser?.id) { await load() }
+            .onReceive(NotificationCenter.default.publisher(for: .qudraCalculationSaved)) { _ in
+                Task { await load() }
+            }
     }
 
     @ViewBuilder
@@ -38,7 +62,21 @@ struct HistoryView: View {
             )
         } else {
             List {
-                ForEach(items) { item in
+                Picker("", selection: $filter) {
+                    ForEach(HistoryFilter.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+
+                if filteredItems.isEmpty {
+                    Text("لا توجد نتائج في هذا التصنيف.")
+                        .font(Theme.Fonts.caption)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .listRowBackground(Color.clear)
+                }
+
+                ForEach(filteredItems) { item in
                     Button {
                         selected = ResultPresentation(input: item.input, result: item.result,
                                                       origin: .history(savedAt: item.createdAt))
@@ -69,11 +107,18 @@ struct HistoryView: View {
     }
 
     private func delete(at offsets: IndexSet) {
-        let toDelete = offsets.map { items[$0] }
-        items.remove(atOffsets: offsets)
+        // الفهارس هنا من القائمة المفلترة.
+        let toDelete = offsets.map { filteredItems[$0] }
+        let ids = Set(toDelete.map(\.id))
+        items.removeAll { ids.contains($0.id) }
         Task {
-            for item in toDelete {
-                try? await repository.delete(id: item.id)
+            do {
+                for item in toDelete {
+                    try await repository.delete(id: item.id)
+                }
+            } catch {
+                // عند الفشل نعيد التحميل لإظهار الحالة الفعلية على الخادم.
+                await load()
             }
         }
     }

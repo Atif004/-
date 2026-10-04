@@ -20,6 +20,9 @@ final class AppSession {
 
     private(set) var state: State = .loading
 
+    /// يصبح `true` عند فتح رابط استعادة كلمة المرور، لعرض شاشة تعيين كلمة جديدة.
+    var isRecoveringPassword = false
+
     var currentUser: AppUser? {
         if case .signedIn(let user) = state { return user }
         return nil
@@ -37,8 +40,11 @@ final class AppSession {
             return
         }
         listenTask = Task { [weak self] in
-            for await (_, session) in client.auth.authStateChanges {
+            for await (event, session) in client.auth.authStateChanges {
                 guard let self else { return }
+                if event == .passwordRecovery {
+                    self.isRecoveringPassword = true
+                }
                 if let user = session?.user {
                     self.state = .signedIn(AppUser(id: user.id, email: user.email))
                 } else if self.state != .guest {
@@ -64,7 +70,8 @@ final class AppSession {
             let response = try await client.auth.signUp(
                 email: email,
                 password: password,
-                data: ["full_name": .string(fullName)]
+                data: ["full_name": .string(fullName)],
+                redirectTo: AppConfig.authRedirectURL
             )
             return response.session == nil
         } catch {
@@ -72,10 +79,50 @@ final class AppSession {
         }
     }
 
+    func sendPasswordReset(email: String) async throws {
+        let client = try SupabaseService.requireClient()
+        do {
+            try await client.auth.resetPasswordForEmail(email, redirectTo: AppConfig.authRedirectURL)
+        } catch {
+            throw QudraError.wrap(error)
+        }
+    }
+
+    func updatePassword(_ newPassword: String) async throws {
+        let client = try SupabaseService.requireClient()
+        do {
+            _ = try await client.auth.update(user: UserAttributes(password: newPassword))
+            isRecoveringPassword = false
+        } catch {
+            throw QudraError.wrap(error)
+        }
+    }
+
+    /// يعالج روابط البريد (تأكيد الحساب أو استعادة كلمة المرور) القادمة عبر qudra://auth-callback.
+    func handle(url: URL) async {
+        guard let client = SupabaseService.client,
+              url.scheme == AppConfig.authRedirectURL.scheme else { return }
+        _ = try? await client.auth.session(from: url)
+    }
+
     func signOut() async {
         if let client = SupabaseService.client {
             try? await client.auth.signOut()
         }
+        state = .signedOut
+    }
+
+    /// يحذف الحساب نهائيًا مع كل بياناته عبر Edge Function `delete-account`.
+    func deleteAccount() async throws {
+        let client = try SupabaseService.requireClient()
+        guard isAuthenticated else { throw QudraError.notSignedIn }
+        do {
+            try await client.functions.invoke(AppConfig.deleteAccountFunctionName)
+        } catch {
+            throw QudraError.wrap(error)
+        }
+        // الجلسة المحلية لم تعد صالحة بعد حذف المستخدم.
+        try? await client.auth.signOut(scope: .local)
         state = .signedOut
     }
 

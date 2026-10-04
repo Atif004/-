@@ -8,6 +8,9 @@ struct ProfileView: View {
     @State private var phone = ""
     @State private var isSaving = false
     @State private var statusMessage: String?
+    @State private var isConfirmingDeletion = false
+    @State private var isDeleting = false
+    @State private var deletionError: String?
 
     private let service = ProfileService()
 
@@ -25,6 +28,7 @@ struct ProfileView: View {
                     SecondaryButton(title: "تسجيل الخروج", systemImage: "rectangle.portrait.and.arrow.right") {
                         Task { await session.signOut() }
                     }
+                    deleteAccountSection
                 }
             }
             .padding(Theme.Spacing.m)
@@ -32,6 +36,42 @@ struct ProfileView: View {
         .qudraBackground()
         .navigationTitle("حسابي")
         .task(id: session.currentUser?.id) { await loadProfile() }
+        .confirmationDialog(
+            "حذف الحساب نهائيًا؟",
+            isPresented: $isConfirmingDeletion,
+            titleVisibility: .visible
+        ) {
+            Button("حذف الحساب وجميع البيانات", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("إلغاء", role: .cancel) {}
+        } message: {
+            Text("سيتم حذف حسابك ونتائجك المحفوظة ولا يمكن التراجع عن ذلك.")
+        }
+    }
+
+    private var deleteAccountSection: some View {
+        VStack(spacing: Theme.Spacing.s) {
+            Button(role: .destructive) {
+                isConfirmingDeletion = true
+            } label: {
+                if isDeleting {
+                    ProgressView().tint(Theme.Colors.danger)
+                } else {
+                    Text("حذف الحساب")
+                        .font(Theme.Fonts.caption)
+                }
+            }
+            .foregroundStyle(Theme.Colors.danger)
+            .disabled(isDeleting)
+            if let deletionError {
+                Text(deletionError)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.Colors.danger)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, Theme.Spacing.s)
     }
 
     private func accountCard(email: String?) -> some View {
@@ -109,6 +149,17 @@ struct ProfileView: View {
         if let profile = try? await service.fetchProfile(userId: userId) {
             fullName = profile.fullName ?? ""
             phone = profile.phone ?? ""
+        }
+    }
+
+    private func deleteAccount() async {
+        deletionError = nil
+        isDeleting = true
+        defer { isDeleting = false }
+        do {
+            try await session.deleteAccount()
+        } catch {
+            deletionError = QudraError.wrap(error).localizedDescription
         }
     }
 
