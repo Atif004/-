@@ -23,8 +23,9 @@ final class SharedFixturesTests: XCTestCase {
             let rulesDict = baseRules.merging(overrides) { _, new in new }
             let rules = try decoder.decode(FinancingRules.self,
                                            from: JSONSerialization.data(withJSONObject: rulesDict))
+            let inputDict = try XCTUnwrap(testCase["input"] as? [String: Any], "\(name): input")
             let input = try decoder.decode(CalculationInput.self,
-                                           from: JSONSerialization.data(withJSONObject: testCase["input"] ?? [:]))
+                                           from: JSONSerialization.data(withJSONObject: inputDict))
             let ruleSet = RuleSet(version: 1, isDemo: true, personal: rules, mortgage: rules)
 
             let result = engine.calculate(input, ruleSet: ruleSet)

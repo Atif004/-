@@ -65,6 +65,11 @@ targets:
     platform: iOS
     sources:
       - path: QudraTests
+    settings:
+      base:
+        # لا يوجد Info.plist لهدف الاختبارات؛ يولّده Xcode تلقائيًا.
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.qudra.app.tests
     dependencies:
       - target: Qudra
       - package: QudraEngine
