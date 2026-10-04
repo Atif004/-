@@ -1,6 +1,8 @@
 import { Composition, Folder } from "remotion";
 import { CafeReel } from "./CafeReel";
 import { PhotoScene } from "./PhotoScene";
+import { PoemReel } from "./poem/PoemReel";
+import { TIMELINE } from "./poem/timeline";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -9,6 +11,14 @@ export const RemotionRoot: React.FC = () => {
         id="CafeReel"
         component={CafeReel}
         durationInFrames={320}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="PoemReel"
+        component={PoemReel}
+        durationInFrames={Math.ceil(TIMELINE.total * 30)}
         fps={30}
         width={1080}
         height={1920}
