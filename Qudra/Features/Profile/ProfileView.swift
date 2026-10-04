@@ -11,8 +11,10 @@ struct ProfileView: View {
     @State private var isConfirmingDeletion = false
     @State private var isDeleting = false
     @State private var deletionError: String?
+    @State private var isAdmin = false
 
     private let service = ProfileService()
+    private let adminService = AdminService()
 
     var body: some View {
         ScrollView {
@@ -24,6 +26,25 @@ struct ProfileView: View {
                     guestCard
                 }
                 rulesCard
+                if isAdmin {
+                    NavigationLink {
+                        AdminRulesView()
+                    } label: {
+                        QudraCard {
+                            HStack {
+                                Image(systemName: "slider.horizontal.3")
+                                    .foregroundStyle(Theme.Colors.gold)
+                                Text("إدارة قواعد الحساب")
+                                    .font(Theme.Fonts.headline)
+                                    .foregroundStyle(Theme.Colors.textPrimary)
+                                Spacer()
+                                Image(systemName: "chevron.forward")
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
                 if session.isAuthenticated {
                     SecondaryButton(title: "تسجيل الخروج", systemImage: "rectangle.portrait.and.arrow.right") {
                         Task { await session.signOut() }
@@ -145,7 +166,11 @@ struct ProfileView: View {
     }
 
     private func loadProfile() async {
-        guard let userId = session.currentUser?.id else { return }
+        guard let userId = session.currentUser?.id else {
+            isAdmin = false
+            return
+        }
+        isAdmin = await adminService.isAdmin(userId: userId)
         if let profile = try? await service.fetchProfile(userId: userId) {
             fullName = profile.fullName ?? ""
             phone = profile.phone ?? ""

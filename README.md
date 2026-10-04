@@ -21,6 +21,7 @@ Packages/QudraEngine/             ← محرك الحساب (حزمة Swift مس
     FinancingRules.swift          ← شكل القواعد + RuleSet.demo (قيم تجريبية)
     FinancingProduct.swift
     ScenarioComparison.swift      ← مقارنة السيناريوهات وإبراز الأفضل
+    RulesValidator.swift          ← التحقق من القواعد (نفس رموز الخادم)
   Tests/QudraEngineTests/
 Qudra/
   App/                            ← نقطة الدخول، الجذر، التبويبات
@@ -41,6 +42,7 @@ Qudra/
     MortgageFinance/              ← حاسبة التمويل العقاري
     Result/                       ← صفحة نتيجة الحساب
     Comparison/                   ← مقارنة السيناريوهات
+    Admin/                        ← لوحة إدارة القواعد (للمدراء فقط)
     History/                      ← النتائج السابقة
     Profile/                      ← الحساب الشخصي
     Auth/                         ← تسجيل الدخول وإنشاء الحساب
@@ -51,6 +53,8 @@ supabase/
   migrations/
     20261004000000_initial_schema.sql   ← الجداول + RLS + trigger الملف الشخصي
     20261004000100_demo_rules.sql       ← قواعد تجريبية
+    20261004000200_rules_admin.sql      ← المدراء، التحقق، النشر والرجوع، سجل التدقيق
+  tests/rules_admin_test.sql            ← اختبارات SQL لإدارة القواعد
   functions/
     _shared/engine.ts             ← نسخة الخادم من محرك الحساب (مطابقة لـ Swift)
     _shared/engine.test.ts        ← اختبارات الحالات المشتركة
@@ -109,7 +113,28 @@ deno test --allow-read supabase/functions/_shared/engine.test.ts   # محرك ا
 `Packages/QudraEngine/Tests/QudraEngineTests/Fixtures/engine_cases.json`.
 عند تعديل منطق الحساب أضف حالة هناك، ويجب أن ينجح الاختباران معًا.
 
-## تعديل قواعد الحساب
+## إدارة القواعد من داخل التطبيق
+
+1. أنشئ حسابًا في التطبيق، ثم انسخ معرّف المستخدم من Supabase → Authentication → Users.
+2. من SQL Editor نفّذ:
+   ```sql
+   insert into public.app_admins (user_id) values ('<USER_ID>');
+   ```
+3. سيظهر في صفحة «حسابي» خيار **إدارة قواعد الحساب**، ويتيح:
+   - إنشاء إصدار جديد مع تحقق فوري من القيم، وقائمة بالتغييرات، ومعاينة أثرها على عميل افتراضي قبل النشر.
+   - الرجوع إلى أي إصدار سابق بضغطة واحدة.
+   - سجل تدقيق بكل عملية نشر أو رجوع، مع اسم من نفّذها ووقتها.
+
+الصلاحية تُفرض على الخادم: النشر والرجوع يتمّان عبر دوال `publish_calculation_rules` و`activate_calculation_rules_version`، وهي ترفض أي مستخدم غير مسجّل في `app_admins`. وقيد `parameters_valid` على الجدول يمنع حفظ قيم غير صالحة حتى عند التعديل اليدوي من لوحة Supabase.
+
+اختبارات SQL (على قاعدة محلية فقط، فهي تضيف مستخدمين تجريبيين داخل transaction يُلغى في النهاية):
+
+```bash
+supabase start && supabase db reset
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f supabase/tests/rules_admin_test.sql
+```
+
+## تعديل قواعد الحساب يدويًا
 
 من لوحة Supabase → Table Editor → `calculation_rules`:
 
