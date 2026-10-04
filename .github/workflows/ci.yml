@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ios:
+        description: "Build and test the iOS app on a macOS runner (uses macOS minutes)"
+        type: boolean
+        default: false
+
+jobs:
+  backend:
+    name: Backend (Supabase, Edge Functions, SQL)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install PostgREST
+        run: |
+          curl -sSL https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz \
+            | sudo tar -xJ -C /usr/local/bin
+          postgrest --version
+
+      - name: Backend tests
+        env:
+          PG_ADMIN_URL: postgres://postgres@127.0.0.1:5432/postgres
+        run: ./scripts/test_backend.sh
+
+      - name: Legal web pages match the in-app documents
+        run: |
+          pip install markdown==3.11
+          python3 scripts/build_legal_pages.py
+          git diff --exit-code docs/
+
+  ios:
+    name: iOS build and tests (manual)
+    if: github.event_name == 'workflow_dispatch' && inputs.ios
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Engine package tests
+        working-directory: Packages/QudraEngine
+        run: swift test
+
+      - name: Build and test app
+        run: |
+          set -o pipefail
+          DEST="platform=iOS Simulator,name=$(xcrun simctl list devices available | grep -m1 -o 'iPhone [0-9]* Pro' || echo 'iPhone 16')"
+          echo "Destination: $DEST"
+          xcodebuild -project Qudra.xcodeproj -scheme Qudra -destination "$DEST" \
+            CODE_SIGNING_ALLOWED=NO test

@@ -91,13 +91,22 @@ supabase functions deploy calculate-capacity
 supabase functions deploy delete-account
 ```
 
-ثم من لوحة Supabase → **Authentication → URL Configuration → Redirect URLs** أضف:
+ثم من لوحة Supabase → **Authentication → URL Configuration → Redirect URLs** أضف الرابطين:
 
 ```
 qudra://auth-callback
+qudra://auth-callback/recovery
 ```
 
-هذا الرابط تستخدمه رسائل تأكيد الحساب واستعادة كلمة المرور لإعادة المستخدم إلى التطبيق.
+الأول لتأكيد الحساب، والثاني لاستعادة كلمة المرور (يفتح شاشة كلمة المرور الجديدة).
+
+**قوالب البريد بالعربية:** من **Authentication → Email Templates** الصق محتوى الملفات التالية مع عناوينها (موجودة أيضًا في `supabase/config.toml`):
+
+| القالب | الملف | العنوان |
+|---|---|---|
+| Confirm signup | `supabase/templates/confirmation.html` | أكّد بريدك الإلكتروني في قُدرة |
+| Reset password | `supabase/templates/recovery.html` | استعادة كلمة المرور في قُدرة |
+| Change email | `supabase/templates/email_change.html` | تأكيد تغيير البريد الإلكتروني في قُدرة |
 
 ### 2) iOS
 
@@ -113,10 +122,22 @@ open Qudra.xcodeproj
 
 ### 3) الاختبارات
 
+**اختبارات الخادم (لا تحتاج Mac):** `scripts/test_backend.sh` يشغّل كل شيء: محرك الحساب، فحص الأنواع، الـ migrations واختبارات SQL، واختبارات تكامل للـ Edge Functions عبر PostgREST حقيقي وRLS.
+
+- **على Windows:** تعمل تلقائيًا على GitHub Actions مع كل push (ملف `.github/workflows/ci.yml`)، أو محليًا داخل WSL.
+- **محليًا (Linux/macOS/WSL):** يحتاج deno وpsql وPostgreSQL وPostgREST:
+  ```bash
+  PG_ADMIN_URL=postgres://postgres@127.0.0.1:5432/postgres ./scripts/test_backend.sh
+  ```
+
+**اختبارات iOS (تحتاج macOS):**
+
 ```bash
 cd Packages/QudraEngine && swift test                              # محرك Swift
-deno test --allow-read supabase/functions/_shared/engine.test.ts   # محرك الخادم
+xcodebuild -project Qudra.xcodeproj -scheme Qudra -destination 'platform=iOS Simulator,name=iPhone 16' test
 ```
+
+بدون Mac: من GitHub → Actions → CI → **Run workflow** مع تفعيل خيار `ios`، فيبني التطبيق ويشغّل اختباراته على جهاز macOS من GitHub (يستهلك دقائق macOS من حسابك).
 
 المحركان يُختبران على **نفس الحالات** في
 `Packages/QudraEngine/Tests/QudraEngineTests/Fixtures/engine_cases.json`.
@@ -141,6 +162,14 @@ deno test --allow-read supabase/functions/_shared/engine.test.ts   # محرك ا
 ```bash
 supabase start && supabase db reset
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f supabase/tests/rules_admin_test.sql
+```
+
+## المستندات القانونية
+
+```bash
+python scripts/fill_legal_placeholders.py --check            # يعرض الحقول الناقصة
+copy legal\fields.example.json legal\fields.json            # (Windows) ثم املأ القيم
+python scripts/fill_legal_placeholders.py legal/fields.json  # يملأ المستندات ويولّد docs/
 ```
 
 ## تعديل قواعد الحساب يدويًا

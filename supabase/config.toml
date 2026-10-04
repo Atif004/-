@@ -27,3 +27,17 @@ verify_jwt = true
 
 [functions.delete-account]
 verify_jwt = true
+
+# قوالب رسائل البريد بالعربية (للمشروع السحابي: انسخ محتواها إلى
+# Authentication → Email Templates في لوحة Supabase).
+[auth.email.template.confirmation]
+subject = "أكّد بريدك الإلكتروني في قُدرة"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "استعادة كلمة المرور في قُدرة"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "تأكيد تغيير البريد الإلكتروني في قُدرة"
+content_path = "./supabase/templates/email_change.html"

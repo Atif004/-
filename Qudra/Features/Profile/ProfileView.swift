@@ -63,7 +63,7 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
                 if session.isAuthenticated {
-                    SecondaryButton(title: "تسجيل الخروج", systemImage: "rectangle.portrait.and.arrow.right") {
+                    SecondaryButton(title: "تسجيل الخروج", systemImage: "rectangle.portrait.and.arrow.forward") {
                         Task { await session.signOut() }
                     }
                     deleteAccountSection
