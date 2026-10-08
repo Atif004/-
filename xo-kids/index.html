@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#7ec8f5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>XO Kids</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23ffd34e'/%3E%3Cpath d='M18 22l26 26M44 22L18 48' stroke='%232f7cf6' stroke-width='10' stroke-linecap='round'/%3E%3Ccircle cx='68' cy='68' r='14' fill='none' stroke='%23f2464b' stroke-width='10'/%3E%3C/svg%3E">
+<style>
+/* =========================================================
+   1. المتغيرات العامة
+   ========================================================= */
+:root {
+  --x: #2f7cf6;
+  --x-soft: #dbe8ff;
+  --o: #f2464b;
+  --o-soft: #ffe0e0;
+  --ink: #2b2d5c;
+  --ink-soft: #6a6d9e;
+  --card: #ffffff;
+  --sun: #ffd34e;
+  --grass: #7dd87d;
+  --purple: #8b6cf6;
+  --radius: 22px;
+  --shadow: 0 6px 0 rgba(43, 45, 92, .15), 0 12px 24px rgba(43, 45, 92, .12);
+  --board: min(88vw, 48dvh, 420px);
+  --font: "Baloo Bhaijaan 2", "Tajawal", "Cairo", "Segoe UI", "Geeza Pro", "Noto Sans Arabic", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: linear-gradient(180deg, #7ec8f5 0%, #b9e4fb 55%, #e9f8ff 100%);
+  overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+
+/* =========================================================
+   2. الخلفية الطفولية (شمس، غيوم، تلال، نجوم)
+   ========================================================= */
+.scene { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+
+.sun {
+  position: absolute; top: -40px; left: -40px; width: 160px; height: 160px;
+  border-radius: 50%; background: var(--sun);
+  box-shadow: 0 0 0 18px rgba(255, 211, 78, .35), 0 0 0 40px rgba(255, 211, 78, .15);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+.cloud {
+  position: absolute; background: #fff; border-radius: 100px; opacity: .9;
+  animation: drift linear infinite;
+}
+.cloud::before, .cloud::after { content: ""; position: absolute; background: #fff; border-radius: 50%; }
+.cloud::before { width: 55%; height: 140%; top: -60%; left: 15%; }
+.cloud::after  { width: 40%; height: 110%; top: -40%; left: 50%; }
+.c1 { width: 120px; height: 36px; top: 12%;  animation-duration: 38s; animation-delay: -6s; }
+.c2 { width: 90px;  height: 28px; top: 28%;  animation-duration: 52s; animation-delay: -30s; opacity: .7; }
+.c3 { width: 150px; height: 44px; top: 6%;   animation-duration: 64s; animation-delay: -45s; opacity: .8; }
+
+.hill { position: absolute; bottom: -60px; border-radius: 50%; }
+.h1 { width: 80vw; height: 200px; right: -20vw; background: #8fe08f; }
+.h2 { width: 90vw; height: 180px; left: -25vw;  background: var(--grass); bottom: -80px; }
+
+.floater {
+  position: absolute; font-size: 26px; opacity: .55;
+  animation: bob 5s ease-in-out infinite;
+}
+
+@keyframes drift { from { transform: translateX(-30vw); } to { transform: translateX(130vw); } }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+@keyframes bob { 50% { transform: translateY(-12px) rotate(8deg); } }
+
+/* =========================================================
+   3. التخطيط العام
+   ========================================================= */
+.app {
+  position: relative; z-index: 1;
+  height: 100dvh;
+  max-width: 520px; margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 12px);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+
+/* العنوان */
+.header { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+
+.logo {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 34px; font-weight: 900; letter-spacing: 1px; line-height: 1;
+  direction: ltr;
+}
+.logo .lx { color: var(--x); text-shadow: 0 3px 0 #1c5bc4; }
+.logo .lo { color: var(--o); text-shadow: 0 3px 0 #b8262b; }
+.logo .lk {
+  margin-inline-start: 8px; font-size: 22px; color: #fff;
+  background: var(--purple); padding: 4px 12px 6px; border-radius: 14px;
+  box-shadow: 0 3px 0 #5f45c4; transform: rotate(-4deg);
+}
+
+.icon-btn {
+  width: 48px; height: 48px; border-radius: 16px;
+  background: var(--card); box-shadow: var(--shadow);
+  font-size: 22px; display: grid; place-items: center;
+  transition: transform .12s;
+}
+.icon-btn:active { transform: translateY(3px) scale(.96); }
+
+/* =========================================================
+   4. الإعدادات (الوضع والصعوبة)
+   ========================================================= */
+.panel {
+  width: 100%; background: rgba(255,255,255,.85);
+  border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.segmented { display: flex; gap: 6px; background: #eef1ff; border-radius: 16px; padding: 4px; }
+.segmented button {
+  flex: 1; min-height: 46px; border-radius: 13px;
+  font-size: 16px; font-weight: 800; color: var(--ink-soft);
+  transition: background .2s, color .2s, transform .12s;
+}
+.segmented button:active { transform: scale(.96); }
+.segmented button[aria-pressed="true"] { background: var(--purple); color: #fff; box-shadow: 0 3px 0 #5f45c4; }
+.segmented.levels button[aria-pressed="true"][data-level="easy"]   { background: #38c172; box-shadow: 0 3px 0 #23914f; }
+.segmented.levels button[aria-pressed="true"][data-level="medium"] { background: #ffa62b; box-shadow: 0 3px 0 #cc7c12; }
+.segmented.levels button[aria-pressed="true"][data-level="hard"]   { background: var(--o);  box-shadow: 0 3px 0 #b8262b; }
+.segmented.levels[hidden] { display: none; }
+
+/* =========================================================
+   5. عداد النتائج
+   ========================================================= */
+.scores { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.score {
+  background: var(--card); border-radius: 18px; padding: 6px 4px 8px;
+  text-align: center; box-shadow: var(--shadow);
+  border-bottom: 5px solid transparent; transition: transform .2s;
+}
+.score .label { font-size: 15px; font-weight: 800; color: var(--ink-soft); }
+.score .value { font-size: 28px; font-weight: 900; line-height: 1.1; }
+.score.sx { border-color: var(--x); } .score.sx .value { color: var(--x); }
+.score.so { border-color: var(--o); } .score.so .value { color: var(--o); }
+.score.sd { border-color: var(--sun); } .score.sd .value { color: #d79b00; }
+.score.bump { animation: bump .5s; }
+@keyframes bump { 40% { transform: scale(1.15); } }
+
+/* =========================================================
+   6. مؤشر الدور
+   ========================================================= */
+.turn {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border-radius: 999px; padding: 6px 18px 6px 8px;
+  box-shadow: var(--shadow); font-size: 18px; font-weight: 800;
+  transition: background .25s;
+}
+.turn .badge {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 20px; font-weight: 900; color: #fff; background: var(--x);
+  transition: background .25s;
+}
+.turn.is-o .badge { background: var(--o); }
+.turn.is-x { background: var(--x-soft); }
+.turn.is-o { background: var(--o-soft); }
+.turn .dots::after { content: ""; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+
+/* =========================================================
+   7. لوحة اللعب
+   ========================================================= */
+.board-wrap { flex: 1; display: grid; place-items: center; width: 100%; min-height: 0; container-type: size; }
+
+.board {
+  position: relative;
+  width: var(--board); height: var(--board);
+  width: min(100cqw, 100cqh, 420px); height: min(100cqw, 100cqh, 420px);
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px;
+  padding: 10px; border-radius: 28px;
+  background: linear-gradient(145deg, #a48bff, #7a5cf0);
+  box-shadow: 0 8px 0 #5f45c4, 0 18px 30px rgba(43,45,92,.25);
+  direction: ltr;
+}
+
+.cell {
+  position: relative; border-radius: 18px; background: #fff;
+  box-shadow: inset 0 -5px 0 #e3e6fb;
+  display: grid; place-items: center;
+  transition: transform .12s, background .2s;
+}
+.cell:not(:disabled):active { transform: scale(.94); background: #f4f5ff; }
+.cell:disabled { cursor: default; }
+.cell.win { animation: winCell .9s ease-in-out infinite alternate; }
+.cell.win.x { background: var(--x-soft); }
+.cell.win.o { background: var(--o-soft); }
+.board.over .cell:not(.win) { opacity: .55; }
+@keyframes winCell { to { transform: scale(1.06); } }
+
+/* الرموز مرسومة بـ SVG مع حركة رسم خفيفة */
+.mark { width: 68%; height: 68%; overflow: visible; }
+.mark path, .mark circle { fill: none; stroke-linecap: round; stroke-width: 14; }
+.mark.x path { stroke: var(--x); stroke-dasharray: 100; stroke-dashoffset: 100; animation: draw .22s ease-out forwards; }
+.mark.x path:nth-child(2) { animation-delay: .14s; }
+.mark.o circle {
+  stroke: var(--o); stroke-dasharray: 220; stroke-dashoffset: 220;
+  animation: draw .38s ease-out forwards; transform: rotate(-90deg); transform-origin: center;
+}
+.mark { animation: pop .35s cubic-bezier(.3, 1.6, .5, 1); }
+.mark.static, .mark.static path, .mark.static circle { animation: none; stroke-dashoffset: 0; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes pop { from { transform: scale(.4); } to { transform: scale(1); } }
+
+/* =========================================================
+   8. أزرار أسفل الشاشة
+   ========================================================= */
+.actions { width: 100%; display: flex; gap: 10px; }
+
+.btn {
+  flex: 1; min-height: 56px; border-radius: 18px;
+  font-size: 18px; font-weight: 900; color: #fff;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform .12s, box-shadow .12s;
+}
+.btn:active { transform: translateY(4px); box-shadow: none !important; }
+.btn-green { background: #38c172; box-shadow: 0 5px 0 #23914f; }
+.btn-light { background: var(--card); color: var(--ink); box-shadow: 0 5px 0 #c9cdee; }
+.btn-red   { background: var(--o); box-shadow: 0 5px 0 #b8262b; }
+
+/* =========================================================
+   9. النوافذ المنبثقة (الفوز / التعادل / التأكيد)
+   ========================================================= */
+.overlay {
+  position: fixed; inset: 0; z-index: 20;
+  display: grid; place-items: center; padding: 24px;
+  background: rgba(43, 45, 92, .45);
+  opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
+}
+.overlay.show { opacity: 1; visibility: visible; }
+
+.modal {
+  width: min(100%, 360px); background: var(--card); border-radius: 30px;
+  padding: 28px 22px 22px; text-align: center;
+  box-shadow: 0 10px 0 rgba(0,0,0,.12), 0 24px 50px rgba(0,0,0,.25);
+  transform: scale(.6) translateY(40px);
+  transition: transform .45s cubic-bezier(.3, 1.6, .5, 1);
+}
+.overlay.show .modal { transform: none; }
+
+.modal .big-emoji { font-size: 72px; line-height: 1; animation: bob 1.6s ease-in-out infinite; }
+.modal h2 { font-size: 40px; font-weight: 900; margin: 10px 0 4px; }
+.modal h2.x { color: var(--x); }
+.modal h2.o { color: var(--o); }
+.modal h2.d { color: #d79b00; }
+.modal p { font-size: 18px; color: var(--ink-soft); font-weight: 700; margin-bottom: 20px; }
+.modal .btn { width: 100%; flex: none; }
+.modal .row { display: flex; gap: 10px; }
+
+/* =========================================================
+   10. قصاصات الاحتفال
+   ========================================================= */
+#confetti { position: fixed; inset: 0; z-index: 30; pointer-events: none; width: 100%; height: 100%; }
+
+/* شاشات منخفضة الارتفاع */
+@media (max-height: 640px) {
+  .logo { font-size: 28px; }
+  .logo .lk { font-size: 18px; }
+  .icon-btn { width: 42px; height: 42px; }
+  .segmented button { min-height: 40px; font-size: 15px; }
+  .score .value { font-size: 22px; }
+  .btn { min-height: 50px; }
+  .app { gap: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- الخلفية -->
+<div class="scene" aria-hidden="true">
+  <div class="sun"></div>
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <div class="cloud c3"></div>
+  <span class="floater" style="top:40%; right:6%;">⭐</span>
+  <span class="floater" style="top:62%; left:5%; animation-delay:-2s;">🎈</span>
+  <span class="floater" style="top:18%; right:30%; animation-delay:-3.5s;">✨</span>
+  <div class="hill h1"></div>
+  <div class="hill h2"></div>
+</div>
+
+<main class="app">
+  <!-- العنوان -->
+  <header class="header">
+    <button class="icon-btn" id="soundBtn" aria-label="الصوت">🔊</button>
+    <h1 class="logo" aria-label="XO Kids"><span class="lx">X</span><span class="lo">O</span><span class="lk">Kids</span></h1>
+    <button class="icon-btn" id="resetScoresBtn" aria-label="إعادة النتائج">🧹</button>
+  </header>
+
+  <!-- اختيار الوضع والصعوبة -->
+  <section class="panel">
+    <div class="segmented modes" role="group" aria-label="وضع اللعب">
+      <button data-mode="pvp">👫 لاعب ضد لاعب</button>
+      <button data-mode="cpu">🤖 ضد الكمبيوتر</button>
+    </div>
+    <div class="segmented levels" role="group" aria-label="مستوى الصعوبة">
+      <button data-level="easy">😊 سهل</button>
+      <button data-level="medium">🙂 متوسط</button>
+      <button data-level="hard">😎 صعب</button>
+    </div>
+  </section>
+
+  <!-- عداد النتائج -->
+  <section class="scores" aria-live="polite">
+    <div class="score sx"><div class="label">X</div><div class="value" id="scoreX">0</div></div>
+    <div class="score sd"><div class="label">تعادل</div><div class="value" id="scoreD">0</div></div>
+    <div class="score so"><div class="label">O</div><div class="value" id="scoreO">0</div></div>
+  </section>
+
+  <!-- الدور الحالي -->
+  <div class="turn is-x" id="turn" aria-live="polite">
+    <span class="badge" id="turnBadge">X</span>
+    <span id="turnText">دور X</span>
+  </div>
+
+  <!-- اللوحة -->
+  <div class="board-wrap">
+    <div class="board" id="board" role="grid" aria-label="لوحة اللعب"></div>
+  </div>
+
+  <!-- الأزرار -->
+  <div class="actions">
+    <button class="btn btn-green" id="newRoundBtn">🔄 جولة جديدة</button>
+  </div>
+</main>
+
+<!-- نافذة النتيجة -->
+<div class="overlay" id="resultOverlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+  <div class="modal">
+    <div class="big-emoji" id="resultEmoji">🏆</div>
+    <h2 id="resultTitle">🎉 فاز X!</h2>
+    <p id="resultSub">أحسنت! أنت بطل</p>
+    <button class="btn btn-green" id="playAgainBtn">🔁 العب مرة أخرى</button>
+  </div>
+</div>
+
+<!-- نافذة تأكيد إعادة النتائج -->
+<div class="overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="modal">
+    <div class="big-emoji">🧹</div>
+    <h2 id="confirmTitle" style="font-size:28px">إعادة النتائج؟</h2>
+    <p>سيتم تصفير جميع النقاط</p>
+    <div class="row">
+      <button class="btn btn-light" id="cancelResetBtn">لا</button>
+      <button class="btn btn-red" id="confirmResetBtn">نعم</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+"use strict";
+
+/* =========================================================
+   1. الثوابت والحالة
+   ========================================================= */
+const STORAGE_KEY = "xo-kids-v1";
+const HUMAN = "X";
+const CPU = "O";
+const CPU_DELAY = 550;
+const WIN_LINES = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8], // أفقي
+  [0, 3, 6], [1, 4, 7], [2, 5, 8], // عمودي
+  [0, 4, 8], [2, 4, 6]             // قطري
+];
+
+const defaultState = () => ({
+  board: Array(9).fill(null),
+  turn: "X",
+  winner: null,        // "X" | "O" | "draw" | null
+  winLine: null,
+  mode: "pvp",         // "pvp" | "cpu"
+  level: "medium",     // "easy" | "medium" | "hard"
+  scores: { X: 0, O: 0, draw: 0 },
+  sound: true
+});
+
+let state = loadState();
+let cpuTimer = null;
+
+/* =========================================================
+   2. الحفظ والاسترجاع (localStorage)
+   ========================================================= */
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved && Array.isArray(saved.board) && saved.board.length === 9) {
+      return { ...defaultState(), ...saved, scores: { ...defaultState().scores, ...saved.scores } };
+    }
+  } catch (_) { /* تخزين غير متاح */ }
+  return defaultState();
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) { /* تجاهل */ }
+}
+
+/* =========================================================
+   3. منطق اللعبة
+   ========================================================= */
+function findWinner(board) {
+  for (const line of WIN_LINES) {
+    const [a, b, c] = line;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return { winner: board[a], line };
+    }
+  }
+  if (board.every(Boolean)) return { winner: "draw", line: null };
+  return null;
+}
+
+function emptyCells(board) {
+  return board.reduce((acc, v, i) => (v ? acc : acc.concat(i)), []);
+}
+
+function isCpuTurn() {
+  return state.mode === "cpu" && state.turn === CPU && !state.winner;
+}
+
+function play(index) {
+  if (state.winner || state.board[index]) return false; // منع اللعب في مربع مستخدم
+
+  state.board[index] = state.turn;
+  sfx(state.turn === "X" ? 520 : 400);
+
+  const result = findWinner(state.board);
+  if (result) {
+    state.winner = result.winner;
+    state.winLine = result.line;
+    state.scores[result.winner] += 1;
+  } else {
+    state.turn = state.turn === "X" ? "O" : "X";
+  }
+
+  saveState();
+  render(index);
+
+  if (result) onRoundEnd(result.winner);
+  else scheduleCpu();
+  return true;
+}
+
+function newRound() {
+  clearTimeout(cpuTimer);
+  const { mode, level, scores, sound } = state;
+  state = { ...defaultState(), mode, level, scores, sound };
+  saveState();
+  hideOverlay(resultOverlay);
+  stopConfetti();
+  render();
+}
+
+/* =========================================================
+   4. الذكاء الاصطناعي (سهل / متوسط / صعب)
+   ========================================================= */
+function randomMove(board) {
+  const cells = emptyCells(board);
+  return cells[Math.floor(Math.random() * cells.length)];
+}
+
+// إيجاد حركة تُكمل خطًّا للرمز المعطى (للفوز أو للصد)
+function findLineMove(board, mark) {
+  for (const i of emptyCells(board)) {
+    board[i] = mark;
+    const won = findWinner(board)?.winner === mark;
+    board[i] = null;
+    if (won) return i;
+  }
+  return null;
+}
+
+// خوارزمية Minimax مع تقليم ألفا-بيتا: تفضّل الفوز الأسرع والخسارة الأبطأ
+function minimax(board, isCpu, depth, alpha, beta) {
+  const r = findWinner(board);
+  if (r) {
+    if (r.winner === CPU) return 10 - depth;
+    if (r.winner === HUMAN) return depth - 10;
+    return 0;
+  }
+  let best = isCpu ? -Infinity : Infinity;
+  for (const i of emptyCells(board)) {
+    board[i] = isCpu ? CPU : HUMAN;
+    const score = minimax(board, !isCpu, depth + 1, alpha, beta);
+    board[i] = null;
+    if (isCpu) { best = Math.max(best, score); alpha = Math.max(alpha, score); }
+    else       { best = Math.min(best, score); beta = Math.min(beta, score); }
+    if (beta <= alpha) break;
+  }
+  return best;
+}
+
+function bestMove(board) {
+  let bestScore = -Infinity;
+  let moves = [];
+  for (const i of emptyCells(board)) {
+    board[i] = CPU;
+    const score = minimax(board, false, 1, -Infinity, Infinity);
+    board[i] = null;
+    if (score > bestScore) { bestScore = score; moves = [i]; }
+    else if (score === bestScore) moves.push(i);
+  }
+  // اختيار عشوائي بين الحركات المتساوية حتى لا تتكرر اللعبة نفسها
+  return moves[Math.floor(Math.random() * moves.length)];
+}
+
+function chooseCpuMove() {
+  const board = state.board.slice();
+  switch (state.level) {
+    case "easy":
+      // يفوز إن رأى الفرصة أحيانًا، وغالبًا يلعب عشوائيًا
+      if (Math.random() < 0.3) {
+        const win = findLineMove(board, CPU);
+        if (win !== null) return win;
+      }
+      return randomMove(board);
+    case "medium": {
+      const win = findLineMove(board, CPU);
+      if (win !== null) return win;
+      const block = findLineMove(board, HUMAN);
+      if (block !== null && Math.random() < 0.85) return block;
+      if (board[4] === null && Math.random() < 0.5) return 4;
+      return randomMove(board);
+    }
+    case "hard":
+    default:
+      return bestMove(board);
+  }
+}
+
+function scheduleCpu() {
+  clearTimeout(cpuTimer);
+  if (!isCpuTurn()) return;
+  render();
+  cpuTimer = setTimeout(() => {
+    if (isCpuTurn()) play(chooseCpuMove());
+  }, CPU_DELAY);
+}
+
+/* =========================================================
+   5. عرض الواجهة
+   ========================================================= */
+const $ = (id) => document.getElementById(id);
+const boardEl = $("board");
+const resultOverlay = $("resultOverlay");
+const confirmOverlay = $("confirmOverlay");
+
+const SVG_X = '<svg class="mark x" viewBox="0 0 100 100"><path pathLength="100" d="M20 20 L80 80"/><path pathLength="100" d="M80 20 L20 80"/></svg>';
+const SVG_O = '<svg class="mark o" viewBox="0 0 100 100"><circle pathLength="220" cx="50" cy="50" r="32"/></svg>';
+
+// إنشاء الخلايا مرة واحدة
+const cells = Array.from({ length: 9 }, (_, i) => {
+  const btn = document.createElement("button");
+  btn.className = "cell";
+  btn.setAttribute("role", "gridcell");
+  btn.addEventListener("click", () => onCellTap(i));
+  boardEl.appendChild(btn);
+  return btn;
+});
+
+function render(animatedIndex = -1) {
+  const lockBoard = !!state.winner || isCpuTurn();
+
+  cells.forEach((cell, i) => {
+    const mark = state.board[i];
+    const current = cell.dataset.mark || "";
+    if ((mark || "") !== current) {
+      cell.innerHTML = mark === "X" ? SVG_X : mark === "O" ? SVG_O : "";
+      cell.dataset.mark = mark || "";
+      if (mark && i !== animatedIndex) cell.firstChild.classList.add("static");
+    }
+    cell.disabled = lockBoard || !!mark;
+    cell.classList.toggle("win", !!state.winLine?.includes(i));
+    cell.classList.toggle("x", mark === "X");
+    cell.classList.toggle("o", mark === "O");
+    cell.setAttribute("aria-label", mark ? `مربع ${i + 1}: ${mark}` : `مربع ${i + 1} فارغ`);
+  });
+  boardEl.classList.toggle("over", !!state.winner);
+
+  // مؤشر الدور
+  const turnEl = $("turn");
+  turnEl.classList.toggle("is-x", state.turn === "X");
+  turnEl.classList.toggle("is-o", state.turn === "O");
+  $("turnBadge").textContent = state.turn;
+  const turnText = $("turnText");
+  turnText.classList.remove("dots");
+  if (state.winner === "draw") turnText.textContent = "تعادل!";
+  else if (state.winner) turnText.textContent = `فاز ${state.winner}!`;
+  else if (isCpuTurn()) { turnText.textContent = "الكمبيوتر يفكر"; turnText.classList.add("dots"); }
+  else if (state.mode === "cpu") turnText.textContent = "دورك يا بطل!";
+  else turnText.textContent = `دور ${state.turn}`;
+
+  // النتائج
+  $("scoreX").textContent = state.scores.X;
+  $("scoreO").textContent = state.scores.O;
+  $("scoreD").textContent = state.scores.draw;
+
+  // الإعدادات
+  document.querySelectorAll("[data-mode]").forEach((b) =>
+    b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
+  document.querySelectorAll("[data-level]").forEach((b) =>
+    b.setAttribute("aria-pressed", String(b.dataset.level === state.level)));
+  document.querySelector(".levels").hidden = state.mode !== "cpu";
+
+  $("soundBtn").textContent = state.sound ? "🔊" : "🔇";
+}
+
+function bumpScore(key) {
+  const el = { X: ".sx", O: ".so", draw: ".sd" }[key];
+  const box = document.querySelector(`.score${el}`);
+  box.classList.remove("bump");
+  void box.offsetWidth;
+  box.classList.add("bump");
+}
+
+function fillResult(winner) {
+  const title = $("resultTitle");
+  const sub = $("resultSub");
+  const emoji = $("resultEmoji");
+  const cpuWon = state.mode === "cpu" && winner === CPU;
+
+  if (winner === "draw") {
+    emoji.textContent = "🤝";
+    title.textContent = "🤝 تعادل!";
+    title.className = "d";
+    sub.textContent = "لعب رائع من الطرفين!";
+  } else {
+    emoji.textContent = cpuWon ? "🤖" : "🏆";
+    title.textContent = `🎉 فاز ${winner}!`;
+    title.className = winner.toLowerCase();
+    sub.textContent = cpuWon ? "حاول مرة أخرى، أنت تستطيع!" : "أحسنت! أنت بطل رائع 🌟";
+  }
+  return cpuWon;
+}
+
+function onRoundEnd(winner) {
+  bumpScore(winner);
+  const cpuWon = fillResult(winner);
+
+  if (winner === "draw") sfxMelody([392, 349, 392]);
+  else if (cpuWon) sfxMelody([440, 392, 330]);
+  else { startConfetti(); sfxMelody([523, 659, 784, 1047]); }
+
+  // تأخير بسيط ليرى الطفل الخط الفائز
+  setTimeout(() => { if (state.winner) showOverlay(resultOverlay); }, 900);
+}
+
+function showOverlay(el) { el.classList.add("show"); }
+function hideOverlay(el) { el.classList.remove("show"); }
+
+/* =========================================================
+   6. الأحداث
+   ========================================================= */
+function onCellTap(i) {
+  if (isCpuTurn()) return;
+  if (!play(i)) shake(cells[i]);
+}
+
+function shake(el) {
+  el.animate(
+    [{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(0)" }],
+    { duration: 220 }
+  );
+}
+
+document.querySelectorAll("[data-mode]").forEach((b) =>
+  b.addEventListener("click", () => {
+    if (state.mode === b.dataset.mode) return;
+    state.mode = b.dataset.mode;
+    newRound();
+  }));
+
+document.querySelectorAll("[data-level]").forEach((b) =>
+  b.addEventListener("click", () => {
+    if (state.level === b.dataset.level) return;
+    state.level = b.dataset.level;
+    newRound();
+  }));
+
+$("newRoundBtn").addEventListener("click", newRound);
+$("playAgainBtn").addEventListener("click", newRound);
+
+$("soundBtn").addEventListener("click", () => {
+  state.sound = !state.sound;
+  saveState();
+  render();
+  sfx(600);
+});
+
+$("resetScoresBtn").addEventListener("click", () => showOverlay(confirmOverlay));
+$("cancelResetBtn").addEventListener("click", () => hideOverlay(confirmOverlay));
+$("confirmResetBtn").addEventListener("click", () => {
+  state.scores = { X: 0, O: 0, draw: 0 };
+  saveState();
+  hideOverlay(confirmOverlay);
+  render();
+});
+confirmOverlay.addEventListener("click", (e) => { if (e.target === confirmOverlay) hideOverlay(confirmOverlay); });
+
+/* =========================================================
+   7. الأصوات (Web Audio – بدون ملفات خارجية)
+   ========================================================= */
+let audioCtx = null;
+
+function sfx(freq, duration = 0.12, delay = 0) {
+  if (!state.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + duration + 0.02);
+  } catch (_) { /* الصوت غير مدعوم */ }
+}
+
+function sfxMelody(notes) {
+  notes.forEach((f, i) => sfx(f, 0.18, i * 0.13));
+}
+
+/* =========================================================
+   8. قصاصات الاحتفال (Canvas)
+   ========================================================= */
+const confettiCanvas = $("confetti");
+const ctx = confettiCanvas.getContext("2d");
+const COLORS = ["#2f7cf6", "#f2464b", "#ffd34e", "#38c172", "#8b6cf6", "#ff8fc7"];
+let pieces = [];
+let confettiRaf = null;
+
+function resizeCanvas() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  confettiCanvas.width = innerWidth * dpr;
+  confettiCanvas.height = innerHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function startConfetti() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  resizeCanvas();
+  pieces = Array.from({ length: 140 }, () => ({
+    x: innerWidth / 2 + (Math.random() - 0.5) * 80,
+    y: innerHeight * 0.45,
+    vx: (Math.random() - 0.5) * 14,
+    vy: -Math.random() * 16 - 6,
+    size: Math.random() * 8 + 6,
+    rot: Math.random() * Math.PI,
+    vr: (Math.random() - 0.5) * 0.3,
+    color: COLORS[(Math.random() * COLORS.length) | 0],
+    shape: Math.random() < 0.3 ? "circle" : "rect",
+    life: 0
+  }));
+  cancelAnimationFrame(confettiRaf);
+  confettiRaf = requestAnimationFrame(tickConfetti);
+}
+
+function tickConfetti() {
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  pieces = pieces.filter((p) => p.y < innerHeight + 40 && p.life < 360);
+  for (const p of pieces) {
+    p.vy += 0.35;
+    p.vx *= 0.99;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rot += p.vr;
+    p.life++;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+    if (p.shape === "circle") { ctx.beginPath(); ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2); ctx.fill(); }
+    else ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+    ctx.restore();
+  }
+  confettiRaf = pieces.length ? requestAnimationFrame(tickConfetti) : null;
+}
+
+function stopConfetti() {
+  cancelAnimationFrame(confettiRaf);
+  pieces = [];
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+}
+
+window.addEventListener("resize", () => { if (pieces.length) resizeCanvas(); });
+
+/* =========================================================
+   9. البدء
+   ========================================================= */
+render();
+if (state.winner) {
+  // جولة محفوظة منتهية: أعد عرض النتيجة بدون احتساب نقاط جديدة
+  fillResult(state.winner);
+  showOverlay(resultOverlay);
+} else {
+  scheduleCpu();
+}
+</script>
+</body>
+</html>
