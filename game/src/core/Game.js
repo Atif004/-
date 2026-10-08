@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { LEVELS, aiParams } from '../config/levels.js';
 import { buildMap, BLOCK, ROAD } from '../world/MapBuilder.js';
+import { buildStadium } from '../world/StadiumBuilder.js';
 import { NavGrid } from '../ai/NavGrid.js';
 import { ChaserAI, Squad, S } from '../ai/ChaserAI.js';
 import { Player } from '../entities/Player.js';
@@ -42,7 +43,7 @@ export class Game {
     if (this.map) this.scene.remove(this.map.group);
     // نخزن الخرائط المبنية لتسريع إعادة المحاولة
     if (!this.mapCache.has(id)) {
-      const map = buildMap(level);
+      const map = level.map === 'stadium' ? buildStadium(level) : buildMap(level);
       const nav = new NavGrid(map.size, map.size, 1.5);
       nav.bake(map.collision, 0.45);
       this.mapCache.set(id, { map, nav });
@@ -54,19 +55,19 @@ export class Game {
     this.scene.add(map.group);
 
     this.particles.clear();
-    this.particles.groundAt = (x, z) => {
+    this.particles.groundAt = map.groundAt || ((x, z) => {
       const lx = (x - ROAD) % (BLOCK + ROAD), lz = (z - ROAD) % (BLOCK + ROAD);
       return x > ROAD && z > ROAD && lx < BLOCK && lz < BLOCK && x < map.size - ROAD && z < map.size - ROAD ? 0.16 : 0.01;
-    };
+    });
     this.bottles?.clear();
     this.bottles = new BottleSystem(this.scene, this.world, this.particles, this.audio);
     this.bottles.onHit = (c, dir) => this.onChaserHit(c, dir);
 
     const rng = makeRng(level.seed * 31 + Date.now() % 1000);
     this.rng = rng;
-    this.player.reset(map.start, level.startBottles);
+    this.player.reset(map.start, level.startBottles, map.startFacing);
     this.player.model.visible = true;
-    this.pickups.setup(map.pickupSpots, level.pickups, rng);
+    this.pickups.setup(map.pickupSpots.filter((p) => nav.walkableAt(p.x, p.z)), level.pickups, rng);
 
     // المطاردون
     for (const c of this.chasers) this.scene.remove(c.model);
@@ -81,21 +82,30 @@ export class Game {
       time: () => this.elapsed,
       onAttack: (ai, dmg) => this.onPlayerAttacked(ai, dmg),
     };
+    // في أصعب مرحلة يحرس كل مخرجٍ حارسٌ خاص به
+    const nGuards = this.params.guardExit ? (level.ai >= 1 ? map.exits.length : 1) : 0;
     for (let i = 0; i < level.chasers; i++) {
       const c = new Chaser(this.scene, chaserVariant(i, makeRng(level.seed + i * 13)), i);
       let role = 'chaser';
-      if (this.params.guardExit && i === 0) role = 'guard';
-      else if (i > 0 && i <= nInter) role = 'interceptor';
+      if (i < nGuards) role = 'guard';
+      else if (i < nGuards + nInter) role = 'interceptor';
       // الحارس يبدأ قرب المخرج، الباقون موزعون في المدينة بعيدًا عن البداية
       let sp;
-      if (role === 'guard') sp = map.exits[0].clone().add(new THREE.Vector3(-6, 0, -6));
+      if (role === 'guard') {
+        // الحارس يقف على بعد خطوات من المخرج باتجاه مركز الخريطة
+        const e = map.exits[i % map.exits.length];
+        const toC = new THREE.Vector3(map.size / 2 - e.x, 0, map.size / 2 - e.z).normalize();
+        sp = e.clone().addScaledVector(toC, 8);
+      }
       else sp = spawns[Math.floor((i / level.chasers) * spawns.length * 0.8)] || spawns[0];
       const ci = nav.nearestWalkable(nav.toCell(sp.x, sp.z));
       if (ci >= 0) nav.cellCenter(ci, sp = sp.clone());
       c.spawn(sp);
       c.facing = Math.atan2(map.start.x - sp.x, map.start.z - sp.z);
       this.chasers.push(c);
-      this.ais.push(new ChaserAI(c, this.params, ctx, role));
+      const ai = new ChaserAI(c, this.params, ctx, role);
+      if (role === 'guard') ai.guardHome = map.exits[i % map.exits.length];
+      this.ais.push(ai);
     }
 
     this.hud.setMap(map.minimap, map.exits);
@@ -122,7 +132,7 @@ export class Game {
   beginPlay() {
     this.menus.hide();
     this.state = 'playing';
-    this.hud.toast('🎯 اهرب إلى نقطة الهروب الخضراء!', 2.5);
+    this.hud.toast('🎯 اعبر الأنفاق واخرج من بوابة الهروب الخضراء!', 2.5);
   }
 
   pause() {
@@ -223,6 +233,7 @@ export class Game {
       if (inp.pause) this.resume();
     }
 
+    if (this.map?.update) this.map.update(t, this.state === 'playing' ? this.crowdExcite || 0.3 : 0.25);
     if (this.map) this.renderer.followShadow(this.state === 'menu' ? this.menuFocus : this.player.body.pos);
     this.audio.update();
     this.renderer.adapt(dt);
@@ -280,6 +291,7 @@ export class Game {
     const nearest = Math.min(...this.ais.map((a) => a.dist ?? 99));
     const dangerTarget = chasing ? Math.min(1, 0.45 + chasing * 0.15 + (nearest < 8 ? 0.3 : 0)) : 0.1;
     this.audio.setIntensity(dangerTarget);
+    this.crowdExcite = dangerTarget; // الجمهور يتحمس أكثر أثناء المطاردة
 
     this.hud.update({
       level: this.level.id, time: this.levelTime, bottles: p.bottles,

@@ -9,9 +9,10 @@ export function setMaxAnisotropy(v) { maxAniso = v; }
 function canvasTex(key, size, draw, repeat = true) {
   if (cache.has(key)) return cache.get(key);
   const c = document.createElement('canvas');
-  c.width = c.height = size;
+  const [w, h] = Array.isArray(size) ? size : [size, size];
+  c.width = w; c.height = h;
   const g = c.getContext('2d');
-  draw(g, size);
+  draw(g, w, h);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -125,4 +126,63 @@ export function labelTexture(text, bg = '#0c7a4a', fg = '#ffffff') {
 export function disposeTextureCache() {
   for (const t of cache.values()) t.dispose();
   cache.clear();
+}
+
+/** عشب الملعب بخطوط متناوبة. */
+export function grassTexture() {
+  return canvasTex('grass-stripes', 256, (g, s) => {
+    g.fillStyle = '#3f8f3a'; g.fillRect(0, 0, s / 2, s);
+    g.fillStyle = '#4a9c42'; g.fillRect(s / 2, 0, s / 2, s);
+    noise(g, s, 0.05, 21);
+  });
+}
+
+export function trackTexture() {
+  return canvasTex('track', 256, (g, s) => {
+    g.fillStyle = '#a5523a'; g.fillRect(0, 0, s, s);
+    noise(g, s, 0.08, 23);
+  });
+}
+
+/** علم الإمارات: شريط أحمر عمودي ثم أخضر/أبيض/أسود. */
+export function uaeFlagTexture() {
+  return canvasTex('uae-flag', 128, (g, s) => {
+    const h = s * 0.5, y0 = (s - h) / 2;
+    g.clearRect(0, 0, s, s);
+    g.fillStyle = '#00843d'; g.fillRect(0, y0, s, h / 3);
+    g.fillStyle = '#ffffff'; g.fillRect(0, y0 + h / 3, s, h / 3);
+    g.fillStyle = '#000000'; g.fillRect(0, y0 + (2 * h) / 3, s, h / 3);
+    g.fillStyle = '#ef3340'; g.fillRect(0, y0, s / 4, h);
+  }, false);
+}
+
+/** لوحة إعلانات حول الملعب (نصوص خيالية). */
+export function adBoardTexture(text, bg, fg) {
+  const key = `ad-${text}-${bg}`;
+  // النسبة 1024×96 تقارب أبعاد اللوحة (10م × 0.9م)
+  return canvasTex(key, [1024, 96], (g, w, h) => {
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.fillStyle = fg;
+    g.font = 'bold 64px system-ui, Tahoma, sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.direction = 'rtl';
+    g.fillText(text, w / 2, h / 2 + 3, w * 0.9);
+  }, false);
+}
+
+/** شاشة النتائج. */
+export function scoreboardTexture() {
+  return canvasTex('scoreboard', 512, (g, s) => {
+    g.fillStyle = '#0b0f14'; g.fillRect(0, 0, s, s);
+    g.fillStyle = '#f2c14e';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl';
+    g.font = 'bold 64px system-ui, Tahoma, sans-serif';
+    g.fillText('نهائي كأس الصيف', s / 2, s * 0.28);
+    g.fillStyle = '#ffffff';
+    g.font = 'bold 110px system-ui, Tahoma, sans-serif';
+    g.fillText('الصقور 2 - 2 النجوم', s / 2, s * 0.62, s * 0.94);
+    g.fillStyle = '#2cff9a';
+    g.font = 'bold 44px system-ui, Tahoma, sans-serif';
+    g.fillText('الدقيقة 90+3', s / 2, s * 0.86);
+  }, false);
 }

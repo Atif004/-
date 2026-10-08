@@ -160,7 +160,7 @@ export function makeChaserModel(variant) {
     : M('#fbfbf8', { roughness: 0.85, side: THREE.DoubleSide });
   mesh(new THREE.SphereGeometry(0.142, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), cloth, head, 0, 0.01, -0.005);
   const drape = mesh(new THREE.CylinderGeometry(0.15, 0.26, 0.42, 16, 1, true, Math.PI * 0.28, Math.PI * 1.44), cloth, head, 0, -0.18, -0.02);
-  drape.rotation.y = Math.PI;
+  drape.userData.openFront = true; // الفتحة نحو +Z (الوجه)
   // العقال: حلقتان سوداوان
   const agal = M('#111111', { roughness: 0.6 });
   const r1 = mesh(new THREE.TorusGeometry(0.128, 0.014, 6, 20), agal, head, 0, 0.075, -0.01);

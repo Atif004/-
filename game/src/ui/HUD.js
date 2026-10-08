@@ -79,6 +79,10 @@ export class HUD {
     const g = c.getContext('2d');
     const k = 320 / minimap.size;
     g.fillStyle = '#3b3e44'; g.fillRect(0, 0, 320, 320);
+    if (minimap.pitch) {
+      const [x, z, w, d] = minimap.pitch;
+      g.fillStyle = '#3f8f3a'; g.fillRect(x * k, z * k, w * k, d * k);
+    }
     g.fillStyle = '#b9ad95';
     for (const [x, z, w, d] of minimap.buildings) g.fillRect(x * k, z * k, w * k, d * k);
     g.fillStyle = '#8a8f98';

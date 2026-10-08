@@ -24,7 +24,7 @@ export class NavGrid {
   bake(collision, agentRadius = 0.5) {
     const c = this.cell;
     for (const b of collision.boxes) {
-      if (b.maxY <= STEP_HEIGHT) continue;
+      if (b.maxY <= STEP_HEIGHT || b.minY >= 2) continue; // الأسقف العلوية لا تعيق المشي
       const x0 = Math.max(0, Math.floor((b.minX - agentRadius) / c));
       const x1 = Math.min(this.w - 1, Math.floor((b.maxX + agentRadius) / c));
       const z0 = Math.max(0, Math.floor((b.minZ - agentRadius) / c));

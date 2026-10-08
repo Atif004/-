@@ -307,7 +307,7 @@ export function buildMap(level) {
   return { group, collision: col, size, start, exits, exitMarkers, pickupSpots, patrolPoints, chaserSpawns, minimap };
 }
 
-function makeExitMarker(p) {
+export function makeExitMarker(p) {
   const g = new THREE.Group();
   g.position.copy(p);
   const ring = new THREE.Mesh(

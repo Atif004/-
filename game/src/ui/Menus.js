@@ -57,7 +57,7 @@ export class Menus {
       <div class="panel title-panel">
         <div class="logo">💧</div>
         <h1>هروب القوارير</h1>
-        <p class="sub">اهرب من المطاردين، استخدم قوارير الماء بحكمة، واوصل إلى نقطة الهروب قبل انتهاء الوقت!</p>
+        <p class="sub">اهرب من المطاردين داخل الملعب، استخدم قوارير الماء بحكمة، واخرج من بوابة الهروب قبل انتهاء الوقت!</p>
         <button class="btn primary" data-act="play">ابدأ اللعبة</button>
         <button class="btn" data-act="levels">اختيار المرحلة</button>
         <button class="btn" data-act="settings">الإعدادات</button>
@@ -169,7 +169,7 @@ export class Menus {
       <div class="intro">
         <div class="intro-num">المرحلة ${level.id}</div>
         <div class="intro-name">${level.name}</div>
-        <div class="intro-goal">🎯 اوصل إلى نقطة الهروب الخضراء • 👥 ${level.chasers} مطاردين</div>
+        <div class="intro-goal">🎯 اخرج من بوابة الهروب الخضراء • 👥 ${level.chasers} مطاردين</div>
       </div>`, 'intro-screen');
   }
 }

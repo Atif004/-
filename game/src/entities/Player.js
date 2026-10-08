@@ -27,14 +27,14 @@ export class Player {
     this.lastStepPhase = 0;
   }
 
-  reset(pos, bottles) {
+  reset(pos, bottles, facing = Math.PI / 4) {
     this.body.pos.copy(pos);
     this.body.vel.set(0, 0, 0);
     this.health.value = this.health.max;
     this.health.invuln = 0;
     this.stamina = 100;
     this.bottles = bottles;
-    this.facing = Math.PI / 4;
+    this.facing = facing;
     this.knock.set(0, 0, 0);
     this.aim = 0;
     this.daze = 0;
