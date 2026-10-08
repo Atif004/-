@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#07060d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!--BODY-START-->
+<title>صِد الهدف</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lalezar&family=Readex+Pro:wght@400;600;700&display=swap">
+<style>
+  /* Layout: one 9:16 neon arena, HUD pinned top, overlays stacked in the middle. Single dark theme by design. */
+  @property --c { syntax: '<color>'; inherits: true; initial-value: #39ff88; }
+  :root {
+    --bg: #07060d;
+    --bg-2: #120f22;
+    --ink: #f4f1ff;
+    --muted: #8f89ad;
+    --line: rgba(244, 241, 255, .10);
+    --t0: #39ff88;   /* green  */
+    --t1: #3db8ff;   /* blue   */
+    --t2: #b45cff;   /* purple */
+    --t3: #ff3b5c;   /* red    */
+    --t4: #ffc93c;   /* gold   */
+    --danger: #ff4d6a;
+    --display: "Lalezar", "Readex Pro", "Segoe UI", Tahoma, sans-serif;
+    --ui: "Readex Pro", "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; background: var(--bg); overflow: hidden; overscroll-behavior: none; }
+  body { display: grid; place-items: center; color: var(--ink); font-family: var(--ui); }
+
+  #app {
+    --c: var(--t0);
+    position: relative;
+    height: 100%;
+    aspect-ratio: 9 / 16;
+    max-width: 100%;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    background:
+      radial-gradient(120% 60% at 50% 115%, color-mix(in srgb, var(--c) 22%, transparent), transparent 60%),
+      radial-gradient(90% 50% at 50% -10%, rgba(120, 90, 255, .16), transparent 70%),
+      linear-gradient(180deg, var(--bg-2), var(--bg));
+    transition: --c .5s ease;
+    isolation: isolate;
+  }
+  /* faint arena grid */
+  #app::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse at 50% 55%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 55%, #000 20%, transparent 75%);
+    opacity: .5;
+  }
+  #app.shake { animation: shake .28s ease; }
+  @keyframes shake {
+    20% { transform: translate(-6px, 2px); } 40% { transform: translate(5px, -3px); }
+    60% { transform: translate(-4px, 1px); } 80% { transform: translate(3px, 0); }
+  }
+  #app.flash::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5;
+    background: radial-gradient(circle at var(--fx, 50%) var(--fy, 50%), color-mix(in srgb, var(--c) 28%, transparent), transparent 45%);
+    animation: fade .3s ease forwards;
+  }
+  @keyframes fade { to { opacity: 0; } }
+
+  canvas#fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+
+  /* ---------- HUD ---------- */
+  .hud {
+    position: absolute; z-index: 4; inset-inline: 0; top: 0;
+    padding: max(14px, env(safe-area-inset-top, 0px)) 16px 0;
+    display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 12px;
+    pointer-events: none;
+  }
+  .stat { display: grid; gap: 2px; }
+  .stat .lbl { font-size: 13px; letter-spacing: .02em; color: var(--muted); font-weight: 600; }
+  .score-num {
+    font: 700 clamp(44px, 13vw, 64px)/1 var(--ui);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    text-shadow: 0 0 18px color-mix(in srgb, var(--c) 70%, transparent);
+  }
+  .score-num.bump { animation: bump .22s ease; }
+  @keyframes bump { 40% { transform: scale(1.18); color: var(--c); } }
+  .timer { justify-items: end; text-align: left; }
+  .time-num {
+    font: 700 clamp(30px, 9vw, 42px)/1 var(--ui);
+    font-variant-numeric: tabular-nums;
+    direction: ltr;
+    transition: font-size .25s ease, color .25s ease;
+  }
+  .timer.warn .time-num {
+    font-size: clamp(46px, 14vw, 66px);
+    color: var(--danger);
+    text-shadow: 0 0 22px rgba(255, 77, 106, .7);
+    animation: warn .5s ease-in-out infinite alternate;
+  }
+  @keyframes warn { from { transform: scale(1); } to { transform: scale(1.08); } }
+  .bar {
+    grid-column: 1 / -1; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden;
+  }
+  .bar > i {
+    display: block; height: 100%; width: 100%; transform-origin: right center;
+    background: var(--c); box-shadow: 0 0 12px var(--c);
+  }
+  .timer.warn ~ .bar > i { background: var(--danger); box-shadow: 0 0 12px var(--danger); }
+
+  /* ---------- Target ---------- */
+  #target {
+    position: absolute; left: 0; top: 0; z-index: 2;
+    width: 120px; height: 120px;
+    pointer-events: none;
+    will-change: transform;
+    transition: width .3s ease, height .3s ease, opacity .25s ease;
+  }
+  #target.off { opacity: 0; }
+  #target.demo { opacity: .55; }
+  .t-body { position: absolute; inset: 0; animation: pulse 1.1s ease-in-out infinite; }
+  #target[data-tier="3"] .t-body, #target[data-tier="4"] .t-body { animation-duration: .7s; }
+  #target.spawn .t-body { animation: spawn .18s ease-out, pulse 1.1s .18s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  @keyframes spawn { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .t-glow {
+    position: absolute; inset: -45%; border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--c) 45%, transparent) 0%, transparent 62%);
+    animation: glow 1.1s ease-in-out infinite;
+  }
+  @keyframes glow { 50% { opacity: .55; } }
+  .t-ring, .t-core, .t-orbit { position: absolute; border-radius: 50%; }
+  .t-ring.r1 {
+    inset: 0; border: 3px solid var(--c);
+    box-shadow: 0 0 14px var(--c), inset 0 0 14px color-mix(in srgb, var(--c) 60%, transparent);
+    background: radial-gradient(circle, color-mix(in srgb, var(--c) 16%, transparent), transparent 70%);
+  }
+  .t-ring.r2 { inset: 22%; border: 3px solid var(--c); box-shadow: 0 0 10px var(--c); opacity: .85; }
+  .t-core {
+    inset: 40%;
+    background: radial-gradient(circle at 40% 35%, #fff 0%, var(--c) 55%);
+    box-shadow: 0 0 18px var(--c), 0 0 36px var(--c);
+  }
+  .t-orbit {
+    inset: -16%; border: 2px dashed color-mix(in srgb, var(--c) 75%, transparent);
+    opacity: 0; animation: spin 3s linear infinite;
+  }
+  #target[data-tier="1"] .t-orbit,
+  #target[data-tier="2"] .t-orbit { opacity: .8; }
+  #target[data-tier="3"] .t-orbit,
+  #target[data-tier="4"] .t-orbit { opacity: 1; animation-duration: 1.2s; border-style: dotted; border-width: 3px; }
+  #target[data-tier="4"] .t-ring.r1 {
+    background: conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--c) 45%, transparent), transparent 40%);
+    animation: spin 1.4s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #target.hit .t-body { animation: hitpop .12s ease-out; }
+  @keyframes hitpop { 50% { transform: scale(.75); filter: brightness(2); } }
+
+  /* ---------- floating texts ---------- */
+  .float {
+    position: absolute; z-index: 6; pointer-events: none;
+    transform: translate(-50%, -50%);
+    font: 400 34px/1 var(--display);
+    white-space: nowrap;
+    animation: rise .7s ease-out forwards;
+  }
+  .float.plus { color: var(--c); text-shadow: 0 0 14px var(--c); direction: ltr; }
+  .float.miss {
+    font: 700 22px/1 var(--ui); letter-spacing: .14em; direction: ltr;
+    color: var(--danger); text-shadow: 0 0 12px rgba(255, 77, 106, .8);
+    animation: missfx .55s ease-out forwards;
+  }
+  @keyframes rise {
+    0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); }
+    20% { opacity: 1; transform: translate(-50%, -80%) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%, -190%) scale(1); }
+  }
+  @keyframes missfx {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+    25% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -90%) scale(.95); }
+  }
+  .toast {
+    position: absolute; z-index: 6; left: 50%; top: 24%; pointer-events: none;
+    transform: translateX(-50%);
+    font: 400 clamp(30px, 9vw, 40px)/1.2 var(--display);
+    color: var(--c); text-shadow: 0 0 20px var(--c);
+    white-space: nowrap;
+    animation: toast 1s ease-out forwards;
+  }
+  @keyframes toast {
+    0% { opacity: 0; transform: translateX(-50%) scale(.6); }
+    20% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+    70% { opacity: 1; transform: translateX(-50%) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  }
+
+  /* ---------- screens ---------- */
+  .screen {
+    position: absolute; inset: 0; z-index: 7;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 24px 20px; text-align: center;
+  }
+  .screen[hidden] { display: none !important; }
+  .screen.enter > * { animation: up .45s cubic-bezier(.2, .9, .3, 1.2) backwards; }
+  .screen.enter > *:nth-child(2) { animation-delay: .06s; }
+  .screen.enter > *:nth-child(3) { animation-delay: .12s; }
+  .screen.enter > *:nth-child(4) { animation-delay: .18s; }
+  .screen.enter > *:nth-child(5) { animation-delay: .24s; }
+  .screen.enter > *:nth-child(6) { animation-delay: .30s; }
+  @keyframes up { from { opacity: 0; transform: translateY(24px) scale(.96); } }
+
+  .eyebrow {
+    font: 600 13px/1 var(--ui); letter-spacing: .08em; color: var(--muted);
+    padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px;
+    background: rgba(255, 255, 255, .03);
+  }
+  h1.title {
+    margin: 0;
+    font: 400 clamp(60px, 19vw, 96px)/1.05 var(--display);
+    color: var(--ink);
+    text-shadow: 0 0 24px color-mix(in srgb, var(--c) 60%, transparent), 0 0 2px #fff;
+  }
+  h1.title .emoji { display: inline-block; font-size: .8em; animation: wobble 2.4s ease-in-out infinite; }
+  @keyframes wobble { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg) scale(1.06); } }
+  .tagline { margin: 0; font: 600 clamp(19px, 5.6vw, 24px)/1.5 var(--ui); color: var(--ink); opacity: .9; }
+  .rules { margin: 0; font: 400 15px/1.7 var(--ui); color: var(--muted); max-width: 30ch; text-wrap: balance; }
+  .rules b { color: var(--c); font-weight: 700; }
+
+  .btn {
+    appearance: none; border: 0; cursor: pointer;
+    font: 400 clamp(28px, 8.4vw, 36px)/1 var(--display);
+    color: #08060f;
+    width: min(100%, 320px);
+    padding: 20px 24px 16px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 82%, #fff), var(--c));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 60%, #fff) inset, 0 8px 0 color-mix(in srgb, var(--c) 45%, #000), 0 0 36px color-mix(in srgb, var(--c) 55%, transparent);
+    transition: transform .08s ease, box-shadow .08s ease;
+    touch-action: manipulation;
+  }
+  .btn:active { transform: translateY(6px); box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 60%, #fff) inset, 0 2px 0 color-mix(in srgb, var(--c) 45%, #000), 0 0 24px color-mix(in srgb, var(--c) 55%, transparent); }
+  .btn:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+  .btn.breathe { animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.04); } }
+  .best-chip { font: 600 15px/1 var(--ui); color: var(--muted); }
+  .best-chip b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* countdown */
+  #countdown { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; pointer-events: none; }
+  #countdown[hidden] { display: none; }
+  #countdown span {
+    font: 400 clamp(150px, 48vw, 230px)/1 var(--display);
+    color: var(--c); text-shadow: 0 0 40px var(--c), 0 0 4px #fff;
+    animation: count .8s ease-out forwards;
+  }
+  #countdown span.go { font-size: clamp(70px, 22vw, 110px); animation-duration: .6s; }
+  @keyframes count {
+    0% { opacity: 0; transform: scale(2.2); }
+    25% { opacity: 1; transform: scale(1); }
+    80% { opacity: 1; transform: scale(.92); }
+    100% { opacity: 0; transform: scale(.6); }
+  }
+
+  /* times up banner */
+  #timesup {
+    position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; pointer-events: none;
+    font: 400 clamp(46px, 14vw, 64px)/1 var(--display); color: var(--ink);
+    text-shadow: 0 0 24px var(--danger);
+    background: rgba(7, 6, 13, .45);
+    animation: up .3s ease-out;
+  }
+  #timesup[hidden] { display: none; }
+
+  /* result */
+  #result { background: radial-gradient(80% 60% at 50% 40%, rgba(7, 6, 13, .55), rgba(7, 6, 13, .92)); gap: 14px; }
+  .res-title { margin: 0; font: 400 clamp(40px, 12vw, 56px)/1.1 var(--display); }
+  .res-card {
+    width: min(100%, 340px);
+    display: grid; gap: 10px; justify-items: center;
+    padding: 22px 18px 20px;
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+    box-shadow: 0 0 40px color-mix(in srgb, var(--c) 22%, transparent) inset, 0 20px 60px rgba(0, 0, 0, .5);
+  }
+  .res-label { font: 600 18px/1 var(--ui); color: var(--muted); }
+  .res-score {
+    font: 700 clamp(84px, 28vw, 124px)/1 var(--ui); font-variant-numeric: tabular-nums;
+    color: var(--c); text-shadow: 0 0 34px var(--c);
+  }
+  .rank {
+    font: 400 clamp(28px, 8.5vw, 36px)/1.2 var(--display);
+    padding: 10px 22px 6px; border-radius: 999px;
+    background: color-mix(in srgb, var(--c) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  }
+  .new-best {
+    font: 700 15px/1 var(--ui); color: #08060f; background: var(--t4);
+    padding: 8px 14px; border-radius: 999px;
+    box-shadow: 0 0 22px rgba(255, 201, 60, .6);
+    animation: breathe 1s ease-in-out infinite;
+  }
+  .res-meta { display: grid; gap: 6px; font: 600 17px/1.4 var(--ui); }
+  .res-meta .best b { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .res-meta .hint { font-size: 14px; color: var(--muted); font-weight: 400; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-body, .t-glow, .t-orbit, #target[data-tier="4"] .t-ring.r1, h1.title .emoji, .btn.breathe, .new-best, .timer.warn .time-num { animation: none !important; }
+    #app.shake { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app" dir="rtl" data-state="menu">
+  <canvas id="fx"></canvas>
+
+  <div id="target" class="demo" data-tier="0" aria-hidden="true">
+    <div class="t-body">
+      <div class="t-glow"></div>
+      <div class="t-orbit"></div>
+      <div class="t-ring r1"></div>
+      <div class="t-ring r2"></div>
+      <div class="t-core"></div>
+    </div>
+  </div>
+
+  <header class="hud" id="hud" hidden>
+    <div class="stat">
+      <span class="lbl">النقاط</span>
+      <span class="score-num" id="score" aria-live="polite">0</span>
+    </div>
+    <div class="stat timer" id="timerBox">
+      <span class="lbl">الوقت</span>
+      <span class="time-num" id="time">10.0</span>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+  </header>
+
+  <section class="screen enter" id="start">
+    <span class="eyebrow">تحدي ١٠ ثوانٍ</span>
+    <h1 class="title">صِد الهدف <span class="emoji">🎯</span></h1>
+    <p class="tagline">هل تستطيع تحطّم الرقم؟</p>
+    <p class="rules">اضغط على <b>الهدف المضيء</b> بأسرع ما يمكن. كل إصابة تجعله أصغر وأسرع.</p>
+    <button class="btn breathe" id="startBtn" type="button">ابدأ اللعب</button>
+    <span class="best-chip" id="startBest" hidden>أفضل نتيجة: <b id="startBestNum">0</b></span>
+  </section>
+
+  <div id="countdown" hidden><span></span></div>
+  <div id="timesup" hidden>انتهى الوقت!</div>
+
+  <section class="screen" id="result" hidden>
+    <h2 class="res-title">انتهى التحدي!</h2>
+    <div class="res-card">
+      <span class="res-label">نتيجتك: <span id="resText">0</span></span>
+      <span class="res-score" id="resScore">0</span>
+      <span class="rank" id="rank">😅 مبتدئ</span>
+      <span class="new-best" id="newBest" hidden>🏆 رقم قياسي جديد!</span>
+    </div>
+    <div class="res-meta">
+      <span class="best">أفضل نتيجة: <b id="bestNum">0</b></span>
+      <span class="hint" id="hint"></span>
+    </div>
+    <button class="btn" id="againBtn" type="button">العب مرة أخرى</button>
+  </section>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- config ----------
+  const DURATION = 10;
+  const TIERS = [
+    // r: target radius as a fraction of arena width, v: speed in arena widths per second
+    { min: 0,  color: '--t0', r: .175, v: .10, toast: '' },
+    { min: 5,  color: '--t1', r: .140, v: .28, toast: 'أسرع! ⚡' },
+    { min: 10, color: '--t2', r: .112, v: .46, toast: 'أصغر وأسرع!' },
+    { min: 15, color: '--t3', r: .092, v: .62, toast: 'سرعة جنونية! 🔥' },
+    { min: 20, color: '--t4', r: .076, v: .74, toast: 'وضع الأسطورة! 👑' },
+  ];
+  const RANKS = [
+    { min: 0,  label: '😅 مبتدئ' },
+    { min: 5,  label: '👍 جيد' },
+    { min: 10, label: '🔥 محترف' },
+    { min: 15, label: '⚡ سريع جدًا' },
+    { min: 20, label: '👑 أسطورة' },
+  ];
+  const MIN_RADIUS = 24;     // keeps the smallest target tappable (48px)
+  const HIT_SLOP = 1.15;     // a little forgiveness around the visible edge
+
+  // ---------- elements ----------
+  const $ = (id) => document.getElementById(id);
+  const app = $('app'), target = $('target'), canvas = $('fx'), ctx = canvas.getContext('2d');
+  const hud = $('hud'), scoreEl = $('score'), timeEl = $('time'), timerBox = $('timerBox'), bar = $('bar');
+  const startScr = $('start'), resultScr = $('result'), countdown = $('countdown'), timesup = $('timesup');
+
+  // ---------- state ----------
+  let state = 'menu';          // menu | countdown | playing | over | result
+  let score = 0, best = 0, tier = 0;
+  let W = 0, H = 0, dpr = 1;
+  let tx = 0, ty = 0, tr = 60, angle = 0, speed = 0, speedMul = 1, nextTurn = 0;
+  let startAt = 0, lastTick = 0, lastWarnSec = 99;
+  const timers = new Set();
+
+  const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); return id; };
+  const clearLater = () => { timers.forEach(clearTimeout); timers.clear(); };
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const tierFor = (s) => { let i = 0; TIERS.forEach((t, k) => { if (s >= t.min) i = k; }); return i; };
+
+  // ---------- audio (Web Audio, synthesized) ----------
+  let ac = null, master = null, noiseBuf = null;
+  function ensureAudio() {
+    try {
+      if (!ac) {
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        const comp = ac.createDynamicsCompressor();
+        master = ac.createGain(); master.gain.value = .7;
+        master.connect(comp); comp.connect(ac.destination);
+        noiseBuf = ac.createBuffer(1, ac.sampleRate * .05, ac.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      }
+      if (ac.state === 'suspended') ac.resume();
+    } catch (e) { ac = null; }
+  }
+  function tone(f, f2, dur, { type = 'sine', vol = .2, delay = 0 } = {}) {
+    if (!ac) return;
+    const t0 = ac.currentTime + delay;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f, t0);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + .008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(master);
+    o.start(t0); o.stop(t0 + dur + .02);
+  }
+  function click(vol = .25) {
+    if (!ac) return;
+    const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    s.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = 2500; g.gain.value = vol;
+    s.connect(f); f.connect(g); g.connect(master); s.start();
+  }
+  const sfx = {
+    pop() { const p = 520 + Math.min(score, 30) * 22; tone(p, p * 1.9, .09, { type: 'triangle', vol: .28 }); click(.18); },
+    miss() { tone(210, 120, .14, { type: 'triangle', vol: .14 }); },
+    count() { tone(660, 0, .14, { vol: .22 }); },
+    go() { tone(880, 1320, .22, { type: 'triangle', vol: .26 }); },
+    tick() { tone(1200, 0, .05, { type: 'square', vol: .05 }); },
+    level() { tone(660, 0, .08, { type: 'triangle', vol: .16 }); tone(990, 0, .12, { type: 'triangle', vol: .16, delay: .07 }); },
+    end() { tone(520, 0, .14, { type: 'triangle', vol: .2 }); tone(390, 0, .14, { type: 'triangle', vol: .2, delay: .13 }); tone(260, 180, .32, { type: 'triangle', vol: .22, delay: .26 }); },
+    best() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0, .16, { type: 'triangle', vol: .18, delay: .1 * i })); },
+  };
+  const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+  // ---------- layout ----------
+  function resize() {
+    const r = app.getBoundingClientRect();
+    W = r.width; H = r.height; dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    applyTier(tier, false);
+    clampTarget();
+    placeEl();
+  }
+  function bounds() {
+    const pad = 16;
+    const hudBottom = hud.hidden ? pad : hud.getBoundingClientRect().bottom - app.getBoundingClientRect().top + 14;
+    return {
+      x0: pad + tr, x1: W - pad - tr,
+      y0: Math.max(hudBottom, pad) + tr, y1: H - pad - 10 - tr,
+    };
+  }
+  function clampTarget() {
+    const b = bounds();
+    tx = Math.min(Math.max(tx, b.x0), Math.max(b.x0, b.x1));
+    ty = Math.min(Math.max(ty, b.y0), Math.max(b.y0, b.y1));
+  }
+  function placeEl() { target.style.transform = `translate3d(${tx - tr}px, ${ty - tr}px, 0)`; }
+
+  function applyTier(i, announce) {
+    const t = TIERS[i];
+    tr = Math.max(MIN_RADIUS, W * t.r);
+    target.style.width = target.style.height = tr * 2 + 'px';
+    target.dataset.tier = i;
+    app.style.setProperty('--c', `var(${t.color})`);
+    if (announce && t.toast) { showToast(t.toast); sfx.level(); }
+  }
+
+  function relocate() {
+    const b = bounds();
+    const minDist = Math.min(W, H) * .32;
+    let nx = tx, ny = ty;
+    for (let k = 0; k < 14; k++) {
+      nx = rand(b.x0, Math.max(b.x0, b.x1));
+      ny = rand(b.y0, Math.max(b.y0, b.y1));
+      if (Math.hypot(nx - tx, ny - ty) >= minDist) break;
+    }
+    tx = nx; ty = ny;
+    angle = rand(0, Math.PI * 2);
+    speedMul = 1;
+    nextTurn = 0;
+    placeEl();
+    target.classList.remove('spawn'); void target.offsetWidth; target.classList.add('spawn');
+  }
+
+  // ---------- movement ----------
+  function currentSpeed() {
+    const t = TIERS[tier];
+    const nextV = TIERS[tier + 1] ? TIERS[tier + 1].v : t.v + .1;
+    const within = Math.min(1, (score - t.min) / 5);       // smooth ramp inside a tier
+    return W * (t.v + (nextV - t.v) * within * .6);
+  }
+  function move(dt, now) {
+    speed = currentSpeed() * speedMul;
+    if (now >= nextTurn) {
+      if (tier >= 4) {               // unpredictable: sharp turns and speed bursts
+        angle += rand(-2.4, 2.4);
+        speedMul = rand(.7, 1.45);
+        nextTurn = now + rand(250, 650);
+      } else if (tier >= 1) {        // gentle curves
+        angle += rand(-.7, .7);
+        nextTurn = now + rand(900, 1700);
+      } else {
+        nextTurn = now + 99999;
+      }
+    }
+    tx += Math.cos(angle) * speed * dt;
+    ty += Math.sin(angle) * speed * dt;
+    const b = bounds();
+    if (tx < b.x0) { tx = b.x0; angle = Math.PI - angle; }
+    if (tx > b.x1) { tx = b.x1; angle = Math.PI - angle; }
+    if (ty < b.y0) { ty = b.y0; angle = -angle; }
+    if (ty > b.y1) { ty = b.y1; angle = -angle; }
+    placeEl();
+  }
+
+  // ---------- effects ----------
+  const parts = [];
+  function burst(x, y, color, n = 18) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, Math.PI * 2), s = rand(120, 420);
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, decay: rand(1.6, 2.6), size: rand(2, 4.5), color });
+    }
+    parts.push({ ring: true, x, y, r: tr * .6, life: 1, decay: 3.2, color });
+  }
+  function drawFx(dt) {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.life -= p.decay * dt;
+      if (p.life <= 0) { parts.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.shadowColor = p.color; ctx.shadowBlur = 12;
+      if (p.ring) {
+        p.r += 420 * dt;
+        ctx.strokeStyle = p.color; ctx.lineWidth = 4 * p.life;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        p.vx *= .92; p.vy *= .92; p.vy += 300 * dt;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life + .5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  }
+  function floatText(x, y, text, cls) {
+    const el = document.createElement('div');
+    el.className = 'float ' + cls;
+    el.textContent = text;
+    el.style.left = Math.min(Math.max(x, 56), W - 56) + 'px';
+    el.style.top = Math.min(Math.max(y, 40), H - 24) + 'px';
+    app.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  }
+  function showToast(text) {
+    app.querySelectorAll('.toast').forEach((t) => t.remove());
+    const el = document.createElement('div');
+    el.className = 'toast'; el.textContent = text;
+    app.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  }
+  function retrigger(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+  // ---------- flow ----------
+  function showScreen(el) {
+    [startScr, resultScr].forEach((s) => { s.hidden = s !== el; });
+    if (el) retrigger(el, 'enter');
+  }
+
+  function startCountdown() {
+    ensureAudio();
+    clearLater();
+    state = 'countdown';
+    app.dataset.state = state;
+    score = 0; tier = 0;
+    scoreEl.textContent = '0';
+    timeEl.textContent = DURATION.toFixed(1);
+    timerBox.classList.remove('warn');
+    bar.style.transform = 'scaleX(1)';
+    showScreen(null);
+    timesup.hidden = true;
+    hud.hidden = false;
+    target.classList.add('off');
+    target.classList.remove('demo');
+    applyTier(0, false);
+
+    const span = countdown.firstElementChild;
+    countdown.hidden = false;
+    const step = (n) => {
+      span.className = '';
+      span.textContent = n;
+      span.style.animation = 'none'; void span.offsetWidth; span.style.animation = '';
+      sfx.count(); buzz(8);
+      later(() => (n > 1 ? step(n - 1) : startGame()), 800);
+    };
+    step(3);
+  }
+
+  function startGame() {
+    const span = countdown.firstElementChild;
+    span.textContent = 'انطلق!';
+    span.className = 'go';
+    span.style.animation = 'none'; void span.offsetWidth; span.style.animation = '';
+    later(() => { countdown.hidden = true; }, 600);
+    sfx.go();
+    state = 'playing';
+    app.dataset.state = state;
+    startAt = performance.now();
+    lastWarnSec = 99;
+    target.classList.remove('off');
+    relocate();
+  }
+
+  function endGame() {
+    state = 'over';
+    app.dataset.state = state;
+    timeEl.textContent = '0.0';
+    bar.style.transform = 'scaleX(0)';
+    target.classList.add('off');
+    timesup.hidden = false;
+    sfx.end(); buzz([30, 40, 60]);
+    later(showResult, 900);
+  }
+
+  function showResult() {
+    state = 'result';
+    app.dataset.state = state;
+    timesup.hidden = true;
+    hud.hidden = true;
+    const isNew = score > best;
+    if (isNew) best = score;
+
+    let rank = RANKS[0];
+    RANKS.forEach((r) => { if (score >= r.min) rank = r; });
+    const nextRank = RANKS.find((r) => r.min > score);
+
+    $('rank').textContent = rank.label;
+    $('bestNum').textContent = best;
+    $('resText').textContent = score;
+    $('newBest').hidden = !(isNew && score > 0);
+    $('hint').textContent = nextRank
+      ? `باقي ${nextRank.min - score} ${nextRank.min - score === 1 ? 'نقطة' : 'نقاط'} لرتبة ${nextRank.label}`
+      : 'أنت في القمة. هل تستطيع تكرارها؟';
+    applyTier(tierFor(score), false);
+    showScreen(resultScr);
+
+    // count-up
+    const el = $('resScore');
+    const t0 = performance.now(), dur = Math.min(900, 250 + score * 35);
+    const run = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      el.textContent = Math.round(score * (1 - Math.pow(1 - k, 3)));
+      if (k < 1 && state === 'result') requestAnimationFrame(run);
+    };
+    requestAnimationFrame(run);
+    if (isNew && score > 0) later(sfx.best, 350);
+  }
+
+  // ---------- input ----------
+  function onPointer(e) {
+    if (state !== 'playing') return;
+    e.preventDefault();
+    const r = app.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const hit = Math.hypot(x - tx, y - ty) <= tr * HIT_SLOP;
+    if (hit) {
+      score++;
+      scoreEl.textContent = score;
+      retrigger(scoreEl, 'bump');
+      const color = cssVar(TIERS[tier].color);
+      burst(tx, ty, color);
+      floatText(tx, ty - tr * .4, '+1', 'plus');
+      app.style.setProperty('--fx', tx + 'px'); app.style.setProperty('--fy', ty + 'px');
+      retrigger(app, 'flash');
+      sfx.pop(); buzz(12);
+      const nt = tierFor(score);
+      if (nt !== tier) { tier = nt; applyTier(tier, true); }
+      relocate();
+    } else {
+      floatText(x, y, 'MISS', 'miss');
+      retrigger(app, 'shake');
+      sfx.miss(); buzz(25);
+      relocate();
+    }
+  }
+  app.addEventListener('pointerdown', onPointer, { passive: false });
+  app.addEventListener('contextmenu', (e) => e.preventDefault());
+  app.addEventListener('touchmove', (e) => { if (state === 'playing') e.preventDefault(); }, { passive: false });
+  $('startBtn').addEventListener('click', startCountdown);
+  $('againBtn').addEventListener('click', startCountdown);
+
+  // ---------- main loop ----------
+  let prev = performance.now();
+  function frame(now) {
+    const dt = Math.min(.05, (now - prev) / 1000);
+    prev = now;
+
+    if (state === 'playing') {
+      const remaining = Math.max(0, DURATION - (now - startAt) / 1000);
+      timeEl.textContent = remaining.toFixed(1);
+      bar.style.transform = `scaleX(${remaining / DURATION})`;
+      if (remaining <= 3) {
+        timerBox.classList.add('warn');
+        const sec = Math.ceil(remaining);
+        if (sec < lastWarnSec && sec > 0) { lastWarnSec = sec; sfx.tick(); }
+      }
+      if (remaining <= 0) endGame();
+      else move(dt, now);
+    } else if (state === 'menu') {
+      move(dt, now);                 // slow demo drift behind the title
+    }
+    drawFx(dt);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- boot ----------
+  function boot(data) {
+    best = (data && data.best) || 0;
+    if (best > 0) { $('startBest').hidden = false; $('startBestNum').textContent = best; }
+    resize();
+    tx = W / 2; ty = H * .72; angle = rand(0, Math.PI * 2);
+    placeEl();
+    requestAnimationFrame(frame);
+  }
+  window.addEventListener('resize', resize);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && ac && ac.state === 'suspended') ac.resume(); });
+
+  const hot = window.claude && window.claude.hot;
+  if (hot && typeof hot.snapshot === 'function') { try { hot.snapshot(() => ({ best })); } catch (e) {} }
+  if (hot && typeof hot.ready === 'function') hot.ready(boot);
+  else boot((hot && hot.data) || {});
+})();
+</script>
+<!--BODY-END-->
+</body>
+</html>
