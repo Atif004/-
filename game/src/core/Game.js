@@ -286,7 +286,7 @@ export class Game {
       hp: p.health.ratio, stamina: p.stamina / 100, exhausted: p.exhausted,
       objective: ed < 25 ? 'نقطة الهروب قريبة! استمر!' : this.map.exits.length > 1 ? `اوصل إلى أي نقطة هروب (${this.map.exits.length})` : 'اوصل إلى نقطة الهروب',
       danger: chasing > 0,
-      needLock: this.state === 'playing' && !this.input.touchMode && document.pointerLockElement !== this.renderer.renderer.domElement, exitDist: ed, exitAngle: Math.atan2(u, -v),
+      needLock: this.state === 'playing' && !this.input.touchMode && !this.input.lockFailed && document.pointerLockElement !== this.renderer.renderer.domElement, exitDist: ed, exitAngle: Math.atan2(u, -v),
     }, dt);
     this.hud.drawMinimap(p.body.pos, yaw, this.chasers.map((c, i) => ({
       x: c.body.pos.x, z: c.body.pos.z,

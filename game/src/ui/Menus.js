@@ -39,7 +39,13 @@ export class Menus {
       case 'menu': this.h.menu(); break;
       case 'back': this.backTo === 'pause' ? this.pause() : this.main(); break;
       case 'reset':
-        if (confirm('هل تريد مسح التقدم المحفوظ؟')) { this.save.reset(); this.settings(this.backTo); }
+        // تأكيد داخل الصفحة: الضغطة الأولى تطلب التأكيد والثانية تمسح
+        if (this.resetArmed) { this.resetArmed = false; this.save.reset(); this.settings(this.backTo); }
+        else {
+          this.resetArmed = true;
+          const b = this.el.querySelector('[data-act="reset"]');
+          if (b) b.textContent = 'اضغط مرة أخرى لتأكيد المسح';
+        }
         break;
       default: break;
     }
@@ -82,6 +88,7 @@ export class Menus {
   }
 
   settings(from) {
+    this.resetArmed = false;
     this.backTo = from === 'pause' ? 'pause' : 'main';
     this.screen = 'settings';
     const s = this.save;
@@ -107,7 +114,7 @@ export class Menus {
           <select data-set="touchControls">${opt('auto', tc, 'تلقائي')}${opt('on', tc, 'إظهار')}${opt('off', tc, 'إخفاء')}</select>
         </label>
         <div class="controls-help">
-          <b>الكمبيوتر:</b> WASD حركة • Shift جري • Space قفز • زر الفأرة الأيسر رمي • الأيمن تصويب • الفأرة للكاميرا • Esc إيقاف<br>
+          <b>الكمبيوتر:</b> WASD حركة • Shift جري • Space قفز • زر الفأرة الأيسر رمي • الأيمن تصويب • الفأرة للكاميرا (أو اسحب بالفأرة) • Esc إيقاف<br>
           <b>الجوال:</b> العصا للحركة • ⚡ جري • ⤒ قفز • 💧 رمي • اسحب بإصبعك للكاميرا
         </div>
         <button class="btn" data-act="back">رجوع</button>

@@ -26,19 +26,35 @@ export class Input {
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
 
+    // إن لم يتوفر قفل المؤشر (داخل إطار مثلًا): السحب بالفأرة يحرك الكاميرا، والنقرة بدون سحب ترمي
+    this.drag = null;
     canvas.addEventListener('mousedown', (e) => {
       if (this.touchMode || !this.enabled) return;
-      if (document.pointerLockElement !== canvas) { this.requestLock(); return; }
-      if (e.button === 0) this.throwQueued = true;
       if (e.button === 2) this.aimHeld = true;
+      if (document.pointerLockElement !== canvas) {
+        this.drag = { moved: 0, button: e.button };
+        this.requestLock();
+        return;
+      }
+      if (e.button === 0) this.throwQueued = true;
     });
-    addEventListener('mouseup', (e) => { if (e.button === 2) this.aimHeld = false; });
+    addEventListener('mouseup', (e) => {
+      if (e.button === 2) this.aimHeld = false;
+      if (this.drag && this.drag.button === 0 && this.drag.moved < 6 && this.lockFailed) this.throwQueued = true;
+      this.drag = null;
+    });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     addEventListener('mousemove', (e) => {
-      if (document.pointerLockElement !== canvas) return;
-      this.look.x += e.movementX;
-      this.look.y += e.movementY;
+      if (document.pointerLockElement === canvas) {
+        this.look.x += e.movementX;
+        this.look.y += e.movementY;
+      } else if (this.drag) {
+        this.drag.moved += Math.abs(e.movementX) + Math.abs(e.movementY);
+        this.look.x += e.movementX * 1.5;
+        this.look.y += e.movementY * 1.5;
+      }
     });
+    document.addEventListener('pointerlockerror', () => { this.lockFailed = true; });
     addEventListener('touchstart', () => this.setTouchMode(true), { passive: true, once: true });
   }
 
@@ -49,7 +65,11 @@ export class Input {
 
   requestLock() {
     if (this.touchMode) return;
-    try { this.canvas.requestPointerLock?.()?.catch?.(() => {}); } catch { /* غير مدعوم */ }
+    if (this.lockFailed || !this.canvas.requestPointerLock) { this.lockFailed = true; return; }
+    try {
+      const r = this.canvas.requestPointerLock();
+      r?.catch?.(() => { this.lockFailed = true; });
+    } catch { this.lockFailed = true; }
   }
 
   releaseLock() {
