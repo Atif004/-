@@ -1,0 +1,12 @@
+{
+  "name": "هروب القوارير",
+  "short_name": "هروب",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0f2a3a",
+  "theme_color": "#0f2a3a",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
