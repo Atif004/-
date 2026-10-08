@@ -25,6 +25,7 @@
   --purple: #8b6cf6;
   --radius: 22px;
   --shadow: 0 6px 0 rgba(43, 45, 92, .15), 0 12px 24px rgba(43, 45, 92, .12);
+  --board: min(88vw, 48vh, 420px);
   --board: min(88vw, 48dvh, 420px);
   --font: "Baloo Bhaijaan 2", "Tajawal", "Cairo", "Segoe UI", "Geeza Pro", "Noto Sans Arabic", system-ui, sans-serif;
 }
@@ -48,7 +49,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 /* =========================================================
    2. الخلفية الطفولية (شمس، غيوم، تلال، نجوم)
    ========================================================= */
-.scene { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.scene { position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 0; overflow: hidden; }
 
 .sun {
   position: absolute; top: -40px; left: -40px; width: 160px; height: 160px;
@@ -86,6 +87,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
    ========================================================= */
 .app {
   position: relative; z-index: 1;
+  height: 100vh;
   height: 100dvh;
   max-width: 520px; margin: 0 auto;
   padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 12px);
@@ -182,6 +184,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 .board {
   position: relative;
+  width: 300px; height: 300px;
   width: var(--board); height: var(--board);
   width: min(100cqw, 100cqh, 420px); height: min(100cqw, 100cqh, 420px);
   display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px;
@@ -212,7 +215,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .mark.x path:nth-child(2) { animation-delay: .14s; }
 .mark.o circle {
   stroke: var(--o); stroke-dasharray: 220; stroke-dashoffset: 220;
-  animation: draw .38s ease-out forwards; transform: rotate(-90deg); transform-origin: center;
+  animation: draw .38s ease-out forwards;
 }
 .mark { animation: pop .35s cubic-bezier(.3, 1.6, .5, 1); }
 .mark.static, .mark.static path, .mark.static circle { animation: none; stroke-dashoffset: 0; }
@@ -239,7 +242,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
    9. النوافذ المنبثقة (الفوز / التعادل / التأكيد)
    ========================================================= */
 .overlay {
-  position: fixed; inset: 0; z-index: 20;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 20;
   display: grid; place-items: center; padding: 24px;
   background: rgba(43, 45, 92, .45);
   opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
@@ -267,7 +270,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 /* =========================================================
    10. قصاصات الاحتفال
    ========================================================= */
-#confetti { position: fixed; inset: 0; z-index: 30; pointer-events: none; width: 100%; height: 100%; }
+#confetti { position: fixed; top: 0; left: 0; z-index: 30; pointer-events: none; width: 100%; height: 100%; }
 
 /* شاشات منخفضة الارتفاع */
 @media (max-height: 640px) {
@@ -280,12 +283,30 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   .app { gap: 8px; }
 }
 
+/* رسالة الأعطال */
+.notice {
+  position: fixed; top: 12px; left: 12px; right: 12px; z-index: 50;
+  background: #fff3cd; color: #7a5200; border: 3px solid #ffd34e; border-radius: 18px;
+  padding: 14px; text-align: center; font-size: 17px; font-weight: 800; line-height: 1.6;
+}
+.notice[hidden] { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
 </style>
 </head>
 <body>
+
+<!-- رسالة تظهر فقط إذا تعطلت اللعبة -->
+<noscript><div class="notice">⚠️ يجب تفعيل JavaScript لتشغيل اللعبة.<br>افتح الملف في متصفح Chrome أو Safari.</div></noscript>
+<div class="notice" id="errorNotice" hidden></div>
+<script>
+  window.onerror = function () {
+    var n = document.getElementById("errorNotice");
+    if (n) { n.hidden = false; n.innerHTML = "⚠️ حدثت مشكلة في تشغيل اللعبة.<br>افتح الملف في متصفح Chrome أو Safari بعد تحديثه."; }
+  };
+</script>
 
 <!-- الخلفية -->
 <div class="scene" aria-hidden="true">
@@ -336,7 +357,17 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
   <!-- اللوحة -->
   <div class="board-wrap">
-    <div class="board" id="board" role="grid" aria-label="لوحة اللعب"></div>
+    <div class="board" id="board" role="grid" aria-label="لوحة اللعب">
+      <button class="cell" role="gridcell" aria-label="مربع 1 فارغ"></button>
+      <button class="cell" role="gridcell" aria-label="مربع 2 فارغ"></button>
+      <button class="cell" role="gridcell" aria-label="مربع 3 فارغ"></button>
+      <button class="cell" role="gridcell" aria-label="مربع 4 فارغ"></button>
+      <button class="cell" role="gridcell" aria-label="مربع 5 فارغ"></button>
+      <button class="cell" role="gridcell" aria-label="مربع 6 فارغ"></button>
+      <button class="cell" role="gridcell" aria-label="مربع 7 فارغ"></button>
+      <button class="cell" role="gridcell" aria-label="مربع 8 فارغ"></button>
+      <button class="cell" role="gridcell" aria-label="مربع 9 فارغ"></button>
+    </div>
   </div>
 
   <!-- الأزرار -->
@@ -407,7 +438,9 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && Array.isArray(saved.board) && saved.board.length === 9) {
-      return { ...defaultState(), ...saved, scores: { ...defaultState().scores, ...saved.scores } };
+      const merged = Object.assign(defaultState(), saved);
+      merged.scores = Object.assign(defaultState().scores, saved.scores);
+      return merged;
     }
   } catch (_) { /* تخزين غير متاح */ }
   return defaultState();
@@ -464,8 +497,12 @@ function play(index) {
 
 function newRound() {
   clearTimeout(cpuTimer);
-  const { mode, level, scores, sound } = state;
-  state = { ...defaultState(), mode, level, scores, sound };
+  const next = defaultState();
+  next.mode = state.mode;
+  next.level = state.level;
+  next.scores = state.scores;
+  next.sound = state.sound;
+  state = next;
   saveState();
   hideOverlay(resultOverlay);
   stopConfetti();
@@ -484,7 +521,8 @@ function randomMove(board) {
 function findLineMove(board, mark) {
   for (const i of emptyCells(board)) {
     board[i] = mark;
-    const won = findWinner(board)?.winner === mark;
+    const r = findWinner(board);
+    const won = !!r && r.winner === mark;
     board[i] = null;
     if (won) return i;
   }
@@ -567,17 +605,12 @@ const resultOverlay = $("resultOverlay");
 const confirmOverlay = $("confirmOverlay");
 
 const SVG_X = '<svg class="mark x" viewBox="0 0 100 100"><path pathLength="100" d="M20 20 L80 80"/><path pathLength="100" d="M80 20 L20 80"/></svg>';
-const SVG_O = '<svg class="mark o" viewBox="0 0 100 100"><circle pathLength="220" cx="50" cy="50" r="32"/></svg>';
+const SVG_O = '<svg class="mark o" viewBox="0 0 100 100"><circle pathLength="220" cx="50" cy="50" r="32" transform="rotate(-90 50 50)"/></svg>';
 
 // إنشاء الخلايا مرة واحدة
-const cells = Array.from({ length: 9 }, (_, i) => {
-  const btn = document.createElement("button");
-  btn.className = "cell";
-  btn.setAttribute("role", "gridcell");
-  btn.addEventListener("click", () => onCellTap(i));
-  boardEl.appendChild(btn);
-  return btn;
-});
+// الخلايا موجودة في HTML، نربط الأحداث فقط
+const cells = Array.prototype.slice.call(boardEl.querySelectorAll(".cell"));
+cells.forEach((cell, i) => cell.addEventListener("click", () => onCellTap(i)));
 
 function render(animatedIndex = -1) {
   const lockBoard = !!state.winner || isCpuTurn();
@@ -591,7 +624,7 @@ function render(animatedIndex = -1) {
       if (mark && i !== animatedIndex) cell.firstChild.classList.add("static");
     }
     cell.disabled = lockBoard || !!mark;
-    cell.classList.toggle("win", !!state.winLine?.includes(i));
+    cell.classList.toggle("win", !!state.winLine && state.winLine.indexOf(i) !== -1);
     cell.classList.toggle("x", mark === "X");
     cell.classList.toggle("o", mark === "O");
     cell.setAttribute("aria-label", mark ? `مربع ${i + 1}: ${mark}` : `مربع ${i + 1} فارغ`);
@@ -678,6 +711,7 @@ function onCellTap(i) {
 }
 
 function shake(el) {
+  if (!el.animate) return;
   el.animate(
     [{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(0)" }],
     { duration: 220 }
